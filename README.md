@@ -507,8 +507,7 @@ Biểu đồ: LINE | BAR | PIE
 | `ShippingProvider` | `shipping_providers` | 1:n Order |
 | `CommissionPolicy` | `commission_policies` | n:1 ShopLevel, n:1 Category |
 | `Notification` | `notifications` | n:1 User |
-| `AuditLog` | `audit_logs` | n:1 User |
-| `PlatformSetting` | `platform_settings` | standalone |
+
 
 ### 4.3. Các enum trạng thái (BẮT BUỘC — package `com.utetra.enums`)
 
