@@ -818,3 +818,634 @@ public final class SecurityConstants {
 | 36 | `promotions` | Nếu làm chương trình khuyến mãi tự động (ngoài voucher) |
 | 37 | `promotion_products` | SP thuộc promotion |
 
+### CẤU TRÚC THƯ MỤC:
+# 📁 CẤU TRÚC THƯ MỤC HỆ THỐNG UTETRA
+
+Dưới đây là cấu trúc thư mục **hoàn chỉnh** cho dự án `utetra-web` — từ root repo đến từng file trong `src/main`.
+
+---
+
+## PHẦN 1. CẤU TRÚC TỔNG QUAN (ROOT REPO)
+
+```
+utetra-web/
+│
+├── .gitignore                              # Loại trừ file rác
+├── .gitattributes                          # Chuẩn hóa line ending
+├── .env.example                            # Mẫu biến môi trường
+├── README.md                               # Giới thiệu dự án
+├── docker-compose.yml                      # Chạy MySQL cho cả nhóm
+├── pom.xml                                 # Maven config
+│
+├── docs/                                   # 📚 Tài liệu dự án
+│   ├── SYSTEM_DESIGN.md
+│   ├── NAMING_CONVENTION.md
+│   ├── COLUMN_NAMING.md
+│   ├── API_ENDPOINTS.md
+│   ├── ERD.md
+│   ├── PERMISSION_MATRIX.md
+│   ├── SETUP_GUIDE.md
+│   ├── TASK_ASSIGNMENT.md
+│   └── diagrams/
+│       ├── architecture.png
+│       ├── erd.png
+│       └── use-case.png
+│
+├── database/                               # 🗄️ Script SQL
+│   ├── V1__init_schema.sql
+│   ├── V2__seed_data.sql
+│   └── README.md
+│
+└── src/
+    ├── main/
+    │   ├── java/com/utetra/                # ☕ Source code Java
+    │   ├── resources/                      # ⚙️ Config + migration
+    │   └── webapp/                         # 🎨 JSP + static files
+    │
+    └── test/
+        └── java/com/utetra/                # 🧪 Unit test
+```
+
+---
+
+## PHẦN 2. CẤU TRÚC `src/main/java/com/utetra/`
+
+```
+com/utetra/
+│
+├── UtetraApplication.java                  # Main class
+│
+├── config/                                 # ⚙️ Cấu hình toàn hệ thống
+│   ├── SecurityConfig.java                 # Spring Security + JWT
+│   ├── WebSocketConfig.java                # STOMP + SockJS
+│   ├── SitemeshConfig.java                 # Decorator
+│   ├── CloudinaryConfig.java               # Cloudinary SDK
+│   ├── MailConfig.java                     # JavaMailSender
+│   ├── JpaAuditingConfig.java              # @CreatedDate, @LastModifiedDate
+│   ├── WebMvcConfig.java                   # Static resources, CORS
+│   ├── SwaggerConfig.java                  # (optional) API docs
+│   └── FlywayConfig.java                   # (optional)
+│
+├── security/                               # 🔐 Xác thực & phân quyền
+│   ├── JwtProvider.java                    # Tạo & verify JWT
+│   ├── JwtAuthenticationFilter.java        # Filter đọc JWT
+│   ├── CustomUserDetailsService.java       # Load user từ DB
+│   ├── UserPrincipal.java                  # Wrapper UserDetails
+│   ├── JwtAuthenticationEntryPoint.java    # 401 handler
+│   └── JwtAccessDeniedHandler.java         # 403 handler
+│
+├── controller/                             # 🎯 Presentation layer
+│   ├── guest/
+│   │   ├── HomeController.java
+│   │   ├── GuestProductController.java
+│   │   ├── GuestShopController.java
+│   │   └── GuestUserController.java
+│   ├── auth/
+│   │   ├── AuthController.java
+│   │   ├── RegisterController.java
+│   │   └── PasswordController.java
+│   ├── customer/
+│   │   ├── CustomerProfileController.java
+│   │   ├── CustomerAddressController.java
+│   │   ├── CustomerCartController.java
+│   │   ├── CustomerOrderController.java
+│   │   ├── CustomerReviewController.java
+│   │   ├── CustomerFavoriteController.java
+│   │   └── CustomerCheckoutController.java
+│   ├── vendor/
+│   │   ├── VendorShopController.java
+│   │   ├── VendorProductController.java
+│   │   ├── VendorOrderController.java
+│   │   ├── VendorStaffController.java
+│   │   ├── VendorWalletController.java
+│   │   ├── VendorVoucherController.java
+│   │   └── VendorStatisticsController.java
+│   ├── admin/
+│   │   ├── AdminDashboardController.java
+│   │   ├── AdminUserController.java
+│   │   ├── AdminShopController.java
+│   │   ├── AdminProductController.java
+│   │   ├── AdminOrderController.java
+│   │   ├── AdminCategoryController.java
+│   │   ├── AdminAttributeController.java
+│   │   ├── AdminShippingController.java
+│   │   ├── AdminCommissionController.java
+│   │   ├── AdminLevelController.java
+│   │   ├── AdminPromotionController.java
+│   │   └── AdminTransactionController.java
+│   └── api/                                # REST endpoint (JSON)
+│       ├── AuthApiController.java
+│       ├── ProductApiController.java
+│       ├── CartApiController.java
+│       ├── OrderApiController.java
+│       ├── PaymentApiController.java
+│       ├── ReviewApiController.java
+│       ├── SearchApiController.java
+│       ├── UploadApiController.java
+│       └── StatisticsApiController.java
+│
+├── service/                                # 🧠 Business layer (interface)
+│   ├── AuthService.java
+│   ├── UserService.java
+│   ├── AddressService.java
+│   ├── OtpService.java
+│   ├── MailService.java
+│   ├── CloudinaryService.java
+│   ├── RoleService.java
+│   ├── UserLevelService.java
+│   ├── ShopService.java
+│   ├── ShopLevelService.java
+│   ├── ShopStaffService.java
+│   ├── CategoryService.java
+│   ├── ProductService.java
+│   ├── ProductAttributeService.java
+│   ├── ProductReviewService.java
+│   ├── CartService.java
+│   ├── OrderService.java
+│   ├── VoucherService.java
+│   ├── PromotionService.java
+│   ├── PaymentService.java
+│   ├── WalletService.java
+│   ├── TransactionService.java
+│   ├── WithdrawService.java
+│   ├── ShippingProviderService.java
+│   ├── CommissionPolicyService.java
+│   ├── NotificationService.java
+│   ├── StatisticsService.java
+│   ├── FavoriteService.java
+│   ├── FollowService.java
+│   └── impl/                               # 🧠 Business layer (impl)
+│       ├── AuthServiceImpl.java
+│       ├── UserServiceImpl.java
+│       ├── ... (tương ứng 1-1 với interface)
+│
+├── repository/                             # 🗄️ Data access layer
+│   ├── UserRepository.java
+│   ├── RoleRepository.java
+│   ├── UserRoleRepository.java
+│   ├── UserLevelRepository.java
+│   ├── AddressRepository.java
+│   ├── OtpTokenRepository.java
+│   ├── RefreshTokenRepository.java
+│   ├── ShopRepository.java
+│   ├── ShopLevelRepository.java
+│   ├── ShopStaffRepository.java
+│   ├── ShopImageRepository.java
+│   ├── ShopFollowRepository.java
+│   ├── CategoryRepository.java
+│   ├── ProductRepository.java
+│   ├── ProductImageRepository.java
+│   ├── ProductAttributeRepository.java
+│   ├── ProductAttributeValueRepository.java
+│   ├── ProductReviewRepository.java
+│   ├── ReviewMediaRepository.java
+│   ├── ProductViewLogRepository.java
+│   ├── ProductFavoriteRepository.java
+│   ├── CartRepository.java
+│   ├── CartItemRepository.java
+│   ├── OrderRepository.java
+│   ├── OrderItemRepository.java
+│   ├── OrderStatusHistoryRepository.java
+│   ├── VoucherRepository.java
+│   ├── VoucherUsageRepository.java
+│   ├── PromotionRepository.java
+│   ├── PromotionProductRepository.java
+│   ├── WalletRepository.java
+│   ├── WalletTransactionRepository.java
+│   ├── TransactionRepository.java
+│   ├── WithdrawRequestRepository.java
+│   ├── ShippingProviderRepository.java
+│   ├── CommissionPolicyRepository.java
+│   └── NotificationRepository.java
+│
+├── entity/                                 # 📦 JPA entities (KHÔNG chia con)
+│   ├── BaseEntity.java
+│   ├── User.java
+│   ├── Role.java
+│   ├── UserRole.java
+│   ├── UserLevel.java
+│   ├── Address.java
+│   ├── OtpToken.java
+│   ├── RefreshToken.java
+│   ├── Shop.java
+│   ├── ShopLevel.java
+│   ├── ShopStaff.java
+│   ├── ShopImage.java
+│   ├── ShopFollow.java
+│   ├── Category.java
+│   ├── Product.java
+│   ├── ProductImage.java
+│   ├── ProductAttribute.java
+│   ├── ProductAttributeValue.java
+│   ├── ProductReview.java
+│   ├── ReviewMedia.java
+│   ├── ProductViewLog.java
+│   ├── ProductFavorite.java
+│   ├── Cart.java
+│   ├── CartItem.java
+│   ├── Order.java
+│   ├── OrderItem.java
+│   ├── OrderStatusHistory.java
+│   ├── Voucher.java
+│   ├── VoucherUsage.java
+│   ├── Promotion.java
+│   ├── PromotionProduct.java
+│   ├── Wallet.java
+│   ├── WalletTransaction.java
+│   ├── Transaction.java
+│   ├── WithdrawRequest.java
+│   ├── ShippingProvider.java
+│   ├── CommissionPolicy.java
+│   └── Notification.java
+│
+├── enums/                                  # 🏷️ TẤT CẢ enum dùng chung
+│   ├── UserStatus.java
+│   ├── ShopStatus.java
+│   ├── ProductStatus.java
+│   ├── OrderStatus.java
+│   ├── PaymentMethod.java
+│   ├── PaymentStatus.java
+│   ├── VoucherType.java
+│   ├── DiscountType.java
+│   ├── NotificationType.java
+│   ├── RoleName.java
+│   ├── WalletTxType.java
+│   ├── StaffRole.java
+│   ├── MediaType.java
+│   ├── OtpType.java
+│   ├── StatisticsType.java
+│   ├── ChartType.java
+│   ├── PromotionType.java
+│   └── WithdrawStatus.java
+│
+├── constant/                               # 📌 Hằng số
+│   ├── AppConstants.java
+│   ├── SecurityConstants.java
+│   ├── MessageConstants.java
+│   ├── ApiPathConstants.java
+│   └── CloudinaryConstants.java
+│
+├── dto/                                    # 📨 Data Transfer Object
+│   ├── request/
+│   │   ├── auth/
+│   │   │   ├── RegisterRequest.java
+│   │   │   ├── LoginRequest.java
+│   │   │   ├── VerifyOtpRequest.java
+│   │   │   ├── ForgotPasswordRequest.java
+│   │   │   └── ResetPasswordRequest.java
+│   │   ├── user/
+│   │   │   ├── UpdateProfileRequest.java
+│   │   │   ├── ChangePasswordRequest.java
+│   │   │   └── CreateAddressRequest.java
+│   │   ├── product/
+│   │   │   ├── CreateProductRequest.java
+│   │   │   ├── UpdateProductRequest.java
+│   │   │   └── ProductSearchRequest.java
+│   │   ├── shop/
+│   │   │   ├── CreateShopRequest.java
+│   │   │   └── UpdateShopRequest.java
+│   │   ├── cart/
+│   │   │   ├── AddToCartRequest.java
+│   │   │   └── UpdateCartItemRequest.java
+│   │   ├── order/
+│   │   │   ├── CreateOrderRequest.java
+│   │   │   ├── UpdateOrderStatusRequest.java
+│   │   │   └── CancelOrderRequest.java
+│   │   ├── review/
+│   │   │   └── CreateReviewRequest.java
+│   │   ├── voucher/
+│   │   │   └── CreateVoucherRequest.java
+│   │   ├── promotion/
+│   │   │   └── CreatePromotionRequest.java
+│   │   ├── wallet/
+│   │   │   └── CreateWithdrawRequest.java
+│   │   └── admin/
+│   │       ├── CreateCategoryRequest.java
+│   │       ├── CreateShippingProviderRequest.java
+│   │       └── UpdateUserStatusRequest.java
+│   └── response/
+│       ├── ApiResponse.java                # { code, message, data }
+│       ├── PageResponse.java               # Phân trang
+│       ├── auth/
+│       │   ├── LoginResponse.java
+│       │   └── TokenResponse.java
+│       ├── user/
+│       │   ├── UserResponse.java
+│       │   ├── UserProfileResponse.java
+│       │   └── AddressResponse.java
+│       ├── product/
+│       │   ├── ProductResponse.java
+│       │   ├── ProductDetailResponse.java
+│       │   └── ProductSearchResponse.java
+│       ├── shop/
+│       │   └── ShopResponse.java
+│       ├── cart/
+│       │   └── CartResponse.java
+│       ├── order/
+│       │   ├── OrderResponse.java
+│       │   └── OrderDetailResponse.java
+│       ├── review/
+│       │   └── ReviewResponse.java
+│       ├── statistics/
+│       │   ├── RevenueStatisticResponse.java
+│       │   └── ChartDataResponse.java
+│       └── notification/
+│           └── NotificationResponse.java
+│
+├── mapper/                                 # 🔄 MapStruct mappers
+│   ├── UserMapper.java
+│   ├── AddressMapper.java
+│   ├── ShopMapper.java
+│   ├── ProductMapper.java
+│   ├── CartMapper.java
+│   ├── OrderMapper.java
+│   ├── ReviewMapper.java
+│   ├── VoucherMapper.java
+│   ├── WalletMapper.java
+│   └── NotificationMapper.java
+│
+├── websocket/                              # 🔌 WebSocket
+│   ├── NotificationController.java
+│   ├── NotificationService.java
+│   ├── OrderWebSocketHandler.java
+│   └── ChatController.java
+│
+├── exception/                              # ⚠️ Exception handling
+│   ├── GlobalExceptionHandler.java
+│   ├── custom/
+│   │   ├── AppException.java
+│   │   ├── ResourceNotFoundException.java
+│   │   ├── EmailExistsException.java
+│   │   ├── OtpExpiredException.java
+│   │   ├── OtpInvalidException.java
+│   │   ├── AccountBannedException.java
+│   │   ├── AccountNotVerifiedException.java
+│   │   ├── InvalidTokenException.java
+│   │   ├── InsufficientStockException.java
+│   │   ├── InvalidOrderStatusException.java
+│   │   ├── VoucherInvalidException.java
+│   │   ├── PermissionDeniedException.java
+│   │   ├── FileUploadException.java
+│   │   └── PaymentFailedException.java
+│   └── ErrorResponse.java
+│
+├── util/                                   # 🛠️ Helper
+│   ├── OtpUtil.java
+│   ├── SlugUtil.java
+│   ├── VNPayUtil.java
+│   ├── MoMoUtil.java
+│   ├── DateTimeUtil.java
+│   ├── SecurityUtil.java
+│   ├── FileUtil.java
+│   ├── PaginationUtil.java
+│   └── ValidationUtil.java
+│
+└── validator/                              # ✔️ Custom validator
+    ├── EmailValidator.java
+    ├── PhoneValidator.java
+    ├── PasswordValidator.java
+    └── annotation/
+        ├── ValidEmail.java
+        └── ValidPhone.java
+```
+
+---
+
+## PHẦN 3. CẤU TRÚC `src/main/resources/`
+
+```
+resources/
+│
+├── application.yml                         # Config chính
+├── application-dev.yml                     # Dev profile
+├── application-prod.yml                    # Prod profile
+├── application-test.yml                    # Test profile
+├── logback-spring.xml                      # Log config
+│
+├── db/
+│   └── migration/                          # Flyway
+│       ├── V1__init_schema.sql
+│       ├── V2__seed_roles.sql
+│       ├── V3__seed_categories.sql
+│       ├── V4__seed_user_levels.sql
+│       └── V5__seed_shop_levels.sql
+│
+├── templates/                              # Email templates (Thymeleaf)
+│   ├── email/
+│   │   ├── otp-register.html
+│   │   ├── otp-forgot-password.html
+│   │   ├── order-confirmation.html
+│   │   ├── order-status-changed.html
+│   │   └── welcome.html
+│   └── fragments/
+│       └── email-layout.html
+│
+├── messages/                               # i18n (nếu cần)
+│   ├── messages.properties
+│   └── messages_vi.properties
+│
+└── static/                                 # Static resources (fallback)
+    ├── css/
+    ├── js/
+    └── images/
+```
+
+---
+
+## PHẦN 4. CẤU TRÚC `src/main/webapp/`
+
+```
+webapp/
+│
+├── WEB-INF/
+│   │
+│   ├── web.xml                             # Servlet config
+│   │
+│   ├── decorators/                         # 🎨 Sitemesh layouts
+│   │   ├── main-decorator.jsp              # Guest/Customer
+│   │   ├── vendor-decorator.jsp            # Vendor dashboard
+│   │   ├── admin-decorator.jsp             # Admin dashboard
+│   │   └── auth-decorator.jsp              # Login/Register
+│   │
+│   ├── fragments/                          # 🧩 JSP fragments (dùng chung)
+│   │   ├── header.jsp
+│   │   ├── footer.jsp
+│   │   ├── navbar-guest.jsp
+│   │   ├── navbar-customer.jsp
+│   │   ├── sidebar-vendor.jsp
+│   │   ├── sidebar-admin.jsp
+│   │   ├── breadcrumb.jsp
+│   │   ├── pagination.jsp
+│   │   ├── toast.jsp
+│   │   └── modal-confirm.jsp
+│   │
+│   └── views/                              # 📄 JSP pages theo actor
+│       │
+│       ├── guest/
+│       │   ├── home.jsp
+│       │   ├── product-list.jsp
+│       │   ├── product-detail.jsp
+│       │   ├── shop-list.jsp
+│       │   ├── shop-detail.jsp
+│       │   ├── user-public-profile.jsp
+│       │   └── search-result.jsp
+│       │
+│       ├── auth/
+│       │   ├── login.jsp
+│       │   ├── register.jsp
+│       │   ├── verify-otp.jsp
+│       │   ├── forgot-password.jsp
+│       │   └── reset-password.jsp
+│       │
+│       ├── customer/
+│       │   ├── profile.jsp
+│       │   ├── change-password.jsp
+│       │   ├── address-list.jsp
+│       │   ├── address-form.jsp
+│       │   ├── cart.jsp
+│       │   ├── checkout.jsp
+│       │   ├── order-history.jsp
+│       │   ├── order-detail.jsp
+│       │   ├── order-tracking.jsp
+│       │   ├── review-form.jsp
+│       │   ├── favorite-products.jsp
+│       │   ├── favorite-shops.jsp
+│       │   └── viewed-products.jsp
+│       │
+│       ├── vendor/
+│       │   ├── dashboard.jsp
+│       │   ├── shop-create.jsp
+│       │   ├── shop-list.jsp
+│       │   ├── shop-detail.jsp
+│       │   ├── shop-edit.jsp
+│       │   ├── product-list.jsp
+│       │   ├── product-form.jsp
+│       │   ├── product-detail.jsp
+│       │   ├── order-list.jsp
+│       │   ├── order-detail.jsp
+│       │   ├── staff-list.jsp
+│       │   ├── staff-form.jsp
+│       │   ├── voucher-list.jsp
+│       │   ├── voucher-form.jsp
+│       │   ├── promotion-list.jsp
+│       │   ├── promotion-form.jsp
+│       │   ├── wallet.jsp
+│       │   ├── withdraw-request.jsp
+│       │   ├── statistics-revenue.jsp
+│       │   └── statistics-product.jsp
+│       │
+│       ├── admin/
+│       │   ├── dashboard.jsp
+│       │   ├── user-list.jsp
+│       │   ├── user-detail.jsp
+│       │   ├── shop-list.jsp
+│       │   ├── shop-detail.jsp
+│       │   ├── product-list.jsp
+│       │   ├── product-detail.jsp
+│       │   ├── order-list.jsp
+│       │   ├── order-detail.jsp
+│       │   ├── category-list.jsp
+│       │   ├── category-form.jsp
+│       │   ├── attribute-list.jsp
+│       │   ├── attribute-form.jsp
+│       │   ├── shipping-list.jsp
+│       │   ├── shipping-form.jsp
+│       │   ├── commission-list.jsp
+│       │   ├── commission-form.jsp
+│       │   ├── user-level-list.jsp
+│       │   ├── user-level-form.jsp
+│       │   ├── shop-level-list.jsp
+│       │   ├── shop-level-form.jsp
+│       │   ├── promotion-list.jsp
+│       │   ├── promotion-form.jsp
+│       │   ├── voucher-list.jsp
+│       │   ├── transaction-list.jsp
+│       │   ├── withdraw-list.jsp
+│       │   ├── statistics-revenue.jsp
+│       │   ├── statistics-user.jsp
+│       │   └── statistics-shop.jsp
+│       │
+│       └── error/
+│           ├── 403.jsp
+│           ├── 404.jsp
+│           ├── 500.jsp
+│           └── error.jsp
+│
+└── static/                                 # 🎨 Static files (css, js, img)
+    ├── css/
+    │   ├── bootstrap.min.css
+    │   ├── main.css
+    │   ├── vendor.css
+    │   ├── admin.css
+    │   ├── auth.css
+    │   └── customer.css
+    │
+    ├── js/
+    │   ├── bootstrap.bundle.min.js
+    │   ├── jquery.min.js
+    │   ├── chart.min.js
+    │   ├── sockjs.min.js
+    │   ├── stomp.min.js
+    │   ├── main.js
+    │   ├── auth.js
+    │   ├── cart.js
+    │   ├── order.js
+    │   ├── product.js
+    │   ├── review.js
+    │   ├── vendor.js
+    │   ├── admin.js
+    │   ├── websocket.js
+    │   └── statistics.js
+    │
+    ├── images/
+    │   ├── logo.png
+    │   ├── banner/
+    │   ├── icons/
+    │   └── placeholder.png
+    │
+    └── fonts/
+        └── ...
+```
+
+---
+
+## PHẦN 5. CẤU TRÚC `src/test/java/com/utetra/`
+
+```
+test/java/com/utetra/
+│
+├── UtetraApplicationTests.java
+│
+├── unit/
+│   ├── service/
+│   │   ├── AuthServiceTest.java
+│   │   ├── OrderServiceTest.java
+│   │   └── CartServiceTest.java
+│   └── util/
+│       ├── OtpUtilTest.java
+│       └── VNPayUtilTest.java
+│
+└── integration/
+    ├── AuthControllerTest.java
+    ├── ProductControllerTest.java
+    └── OrderControllerTest.java
+```
+
+---
+
+## PHẦN 6. NGUYÊN TẮC TỔ CHỨC THƯ MỤC
+
+| # | Nguyên tắc | Lý do |
+|---|---|---|
+| 1 | Mỗi entity có 1 repository, 1 service (interface + impl), có thể có 1 controller | Nhất quán |
+| 2 | Entity **KHÔNG** chia sub-package | Tránh phức tạp, dễ tìm |
+| 3 | Enum tập trung ở `enums/` | Không tạo enum rải rác |
+| 4 | Controller chia theo **actor** (`guest`, `auth`, `customer`, `vendor`, `admin`, `api`) | Dễ phân quyền |
+| 5 | DTO chia `request/` và `response/`, bên trong chia theo module | Tránh 1 folder quá nhiều file |
+| 6 | JSP chia theo **actor** giống controller | Dễ map |
+| 7 | Decorator chỉ 4 file: main, auth, vendor, admin | Đủ dùng |
+| 8 | Fragments chứa header/footer/sidebar tái sử dụng | DRY |
+| 9 | Static files chia rõ css/js/images/fonts | Chuẩn |
+| 10 | Docs tách riêng khỏi source | Sạch repo |
+
+
