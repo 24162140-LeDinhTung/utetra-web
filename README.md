@@ -739,4 +739,83 @@ public final class SecurityConstants {
     };
 }
 ```
+# 📊 TỔNG KẾT SỐ BẢNG CẦN THIẾT
+
+## Tóm tắt: **35 bảng** (đủ cho đồ án, không thừa không thiếu)
+
+---
+
+## PHẦN 1. DANH SÁCH 35 BẢNG THEO NHÓM
+
+### 🔹 Nhóm 1: User & Auth (7 bảng)
+| # | Bảng | Ghi chú |
+|---|---|---|
+| 1 | `users` | |
+| 2 | `roles` | |
+| 3 | `user_roles` | |
+| 4 | `user_levels` | Cấp độ + chiết khấu mua hàng |
+| 5 | `addresses` | Địa chỉ giao hàng |
+| 6 | `otp_tokens` | OTP register/forgot (tách riêng) |
+| 7 | `refresh_tokens` | JWT refresh |
+
+### 🔹 Nhóm 2: Shop & Vendor (4 bảng)
+| # | Bảng | Ghi chú |
+|---|---|---|
+| 8 | `shops` | |
+| 9 | `shop_levels` | Cấp độ + % hoa hồng |
+| 10 | `shop_staffs` | Nhân viên/đối tác |
+| 11 | `shop_images` | Ảnh cover/feature |
+
+### 🔹 Nhóm 3: Sản phẩm (7 bảng)
+| # | Bảng | Ghi chú |
+|---|---|---|
+| 12 | `categories` | |
+| 13 | `products` | |
+| 14 | `product_images` | |
+| 15 | `product_attributes` | Size, Topping, Đường, Đá... |
+| 16 | `product_attribute_values` | |
+| 17 | `product_reviews` | |
+| 18 | `review_media` | Ảnh/video review |
+
+### 🔹 Nhóm 4: Giỏ hàng & Đơn hàng (7 bảng)
+| # | Bảng | Ghi chú |
+|---|---|---|
+| 19 | `carts` | |
+| 20 | `cart_items` | |
+| 21 | `orders` | |
+| 22 | `order_items` | Có snapshot sản phẩm |
+| 23 | `order_status_history` | |
+| 24 | `vouchers` | Mã giảm giá |
+| 25 | `voucher_usages` | |
+
+### 🔹 Nhóm 5: Thanh toán & Ví (4 bảng)
+| # | Bảng | Ghi chú |
+|---|---|---|
+| 26 | `wallets` | Ví shop |
+| 27 | `wallet_transactions` | |
+| 28 | `transactions` | Giao dịch thanh toán |
+| 29 | `withdraw_requests` | Yêu cầu rút tiền |
+
+### 🔹 Nhóm 6: Vận chuyển & Hoa hồng (2 bảng)
+| # | Bảng | Ghi chú |
+|---|---|---|
+| 30 | `shipping_providers` | |
+| 31 | `commission_policies` | Chính sách hoa hồng |
+
+### 🔹 Nhóm 7: Tương tác & Hệ thống (4 bảng)
+| # | Bảng | Ghi chú |
+|---|---|---|
+| 32 | `product_favorites` | Yêu thích SP |
+| 33 | `shop_follows` | Theo dõi shop |
+| 34 | `product_view_logs` | Lịch sử xem |
+| 35 | `notifications` | |
+
+---
+
+## PHẦN 2. BẢNG **TÙY CHỌN** (làm nếu còn thời gian)
+
+| # | Bảng | Khi nào cần |
+|---|---|---|
+| 36 | `promotions` | Nếu làm chương trình khuyến mãi tự động (ngoài voucher) |
+| 37 | `promotion_products` | SP thuộc promotion |
 
