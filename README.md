@@ -10,7 +10,7 @@
 | Thành phần | Phiên bản | Ghi chú |
 |---|---|---|
 | **Java** | **21 (LTS)** | Hỗ trợ Virtual Threads, ổn định đến 2031 |
-| **Spring Boot** | **3.3.x** | Bản ổn định, hỗ trợ Java 21 |
+| **Spring Boot** | **4.1.1** | Bản ổn định, hỗ trợ Java 21 |
 | **Spring Security** | 6.x | Đi kèm Spring Boot 3.3 |
 | **Spring Data JPA** | 3.x | Hibernate 6.x |
 | **MySQL** | **8.4 LTS** | KHÔNG dùng 9.x (bản Innovation, không LTS) |
