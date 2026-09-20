@@ -11,7 +11,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -19,5 +19,13 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
 server:
   port: 8080
+
+jwt:
+  secret: utetra-super-secret-key-change-in-production-minimum-256-bits-for-hs256-algorithm
+  access-expire-minutes: 15
+  refresh-expire-days: 7
