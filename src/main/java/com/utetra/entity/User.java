@@ -49,7 +49,7 @@ public class User extends BaseEntity {
     @Column(name = "user_level_id")
     private Long userLevelId;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",
         joinColumns = @JoinColumn(name = "user_id"),
