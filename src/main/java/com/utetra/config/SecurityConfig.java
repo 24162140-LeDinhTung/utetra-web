@@ -49,15 +49,21 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // 1. CHO PHÉP TRUY CẬP CÁC TRANG GIAO DIỆN VÀ API CÔNG KHAI
                 .requestMatchers(
-                    "/", "/api/auth/**",
+                	"/", "/auth/**", "/error", "/favicon.ico", // <-- Thêm dòng này để mở khóa trang chủ và trang đăng nhập
+                    "/api/auth/**",
                     "/api/products/**", "/api/shops/**", "/api/users/*/public",
                     "/static/**", "/css/**", "/js/**", "/images/**", "/fonts/**",
-                    "/WEB-INF/views/**", "/error"
+                    "/WEB-INF/views/**", "/WEB-INF/decorators/**" // <-- Thêm để cho phép load JSP
                 ).permitAll()
-                .requestMatchers("/api/customer/**").hasAnyRole("CUSTOMER", "VENDOR", "ADMIN")
-                .requestMatchers("/api/vendor/**").hasAnyRole("VENDOR", "ADMIN")
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                
+                // 2. PHÂN QUYỀN CHO CÁC API
+                .requestMatchers("/api/customer/**").hasAuthority("ROLE_CUSTOMER")
+                .requestMatchers("/api/vendor/**").hasAnyAuthority("ROLE_VENDOR", "ROLE_ADMIN")
+                .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                
+                // 3. CÁC REQUEST KHÁC PHẢI ĐĂNG NHẬP
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
