@@ -8,3 +8,5 @@ logging:
   level:
     root: WARN
     com.utetra: INFO
+  file:
+    name: logs/utetra.log
