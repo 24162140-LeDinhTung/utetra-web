@@ -66,9 +66,9 @@
                     
                     // Chuyển hướng dựa vào Role (nếu cần)
                     if (data.data.roles.includes("ROLE_ADMIN")) {
-                        window.location.href = '/admin/dashboard';
+                        window.location.href = '/admin/categories';
                     } else if (data.data.roles.includes("ROLE_VENDOR")) {
-                        window.location.href = '/vendor/dashboard';
+                        window.location.href = '/vendor/products';
                     } else {
                         window.location.href = '/'; // Chuyển về trang chủ
                     }

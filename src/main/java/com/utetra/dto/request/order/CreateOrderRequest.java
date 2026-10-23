@@ -10,14 +10,18 @@ import lombok.Setter;
 @Setter
 public class CreateOrderRequest {
 
-    @NotNull
-    private Long shopId;
+  @NotNull private Long shopId;
 
-    @NotBlank
-    private String shippingAddress;
+  @NotBlank
+  @jakarta.validation.constraints.Size(max = 2000)
+  private String shippingAddress;
 
-    private String voucherCode;
+  @jakarta.validation.constraints.PositiveOrZero
+  @jakarta.validation.constraints.Digits(integer = 10, fraction = 2)
+  private java.math.BigDecimal expectedTotalAmount;
 
-    @NotNull
-    private PaymentMethod paymentMethod;
+  @jakarta.validation.constraints.Size(max = 50)
+  private String voucherCode;
+
+  @NotNull private PaymentMethod paymentMethod;
 }

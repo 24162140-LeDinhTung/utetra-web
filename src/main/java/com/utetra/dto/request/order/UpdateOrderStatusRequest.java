@@ -9,8 +9,8 @@ import lombok.Setter;
 @Setter
 public class UpdateOrderStatusRequest {
 
-    @NotNull
-    private OrderStatus status;
+  @NotNull private OrderStatus status;
 
-    private String note;
+  @jakarta.validation.constraints.Size(max = 255)
+  private String note;
 }

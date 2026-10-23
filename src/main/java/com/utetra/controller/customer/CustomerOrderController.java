@@ -18,31 +18,55 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CustomerOrderController {
 
-    private final OrderService orderService;
+  private final OrderService orderService;
+  private final com.utetra.service.OrderQuoteService quoteService;
 
-    @PostMapping
-    public OrderDetailResponse createOrder(@RequestParam Long userId,
-                                            @Valid @RequestBody CreateOrderRequest request) {
-        return orderService.createOrder(userId, request);
-    }
+  @PostMapping("/quote")
+  public com.utetra.service.OrderQuoteService.Quote quote(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal,
+      @Valid @RequestBody CreateOrderRequest request) {
+    return quoteService.quote(principal.getId(), request);
+  }
 
-    @GetMapping
-    public Page<OrderResponse> getOrders(@RequestParam Long userId,
-                                          @RequestParam(required = false) OrderStatus status,
-                                          @RequestParam(defaultValue = "0") int page,
-                                          @RequestParam(defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return orderService.getByUser(userId, status, pageable);
-    }
+  @PostMapping
+  public OrderDetailResponse createOrder(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal,
+      @Valid @RequestBody CreateOrderRequest request) {
+    return orderService.createOrder(principal.getId(), request);
+  }
 
-    @GetMapping("/{id}")
-    public OrderDetailResponse getDetail(@PathVariable Long id) {
-        return orderService.getDetail(id);
-    }
+  @GetMapping
+  public Page<OrderResponse> getOrders(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal,
+      @RequestParam(required = false) OrderStatus status,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size) {
+    Pageable pageable =
+        PageRequest.of(
+            Math.max(0, page),
+            Math.max(1, Math.min(100, size)),
+            org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Direction.DESC, "id"));
+    return orderService.getByUser(principal.getId(), status, pageable);
+  }
 
-    @PostMapping("/{id}/cancel")
-    public void cancelOrder(@RequestParam Long userId, @PathVariable Long id,
-                             @Valid @RequestBody CancelOrderRequest request) {
-        orderService.cancelOrder(userId, id, request);
-    }
+  @GetMapping("/{id}")
+  public OrderDetailResponse getDetail(
+      @PathVariable Long id,
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal) {
+    return orderService.getDetail(principal.getId(), id);
+  }
+
+  @PostMapping("/{id}/cancel")
+  public void cancelOrder(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal,
+      @PathVariable Long id,
+      @Valid @RequestBody CancelOrderRequest request) {
+    orderService.cancelOrder(principal.getId(), id, request);
+  }
 }

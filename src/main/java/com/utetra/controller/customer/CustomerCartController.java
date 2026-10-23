@@ -5,36 +5,46 @@ import com.utetra.dto.request.cart.UpdateCartItemRequest;
 import com.utetra.dto.response.cart.CartResponse;
 import com.utetra.service.CartService;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/customer/cart")
 @RequiredArgsConstructor
 public class CustomerCartController {
 
-    private final CartService cartService;
+  private final CartService cartService;
 
-    @GetMapping
-    public List<CartResponse> getCart(@RequestParam Long userId) {
-        return cartService.getCart(userId);
-    }
+  @GetMapping
+  public List<CartResponse> getCart(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal) {
+    return cartService.getCart(principal.getId());
+  }
 
-    @PostMapping("/items")
-    public int addItem(@RequestParam Long userId, @Valid @RequestBody AddToCartRequest request) {
-        return cartService.addItem(userId, request);
-    }
+  @PostMapping("/items")
+  public int addItem(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal,
+      @Valid @RequestBody AddToCartRequest request) {
+    return cartService.addItem(principal.getId(), request);
+  }
 
-    @PutMapping("/items/{id}")
-    public void updateItem(@RequestParam Long userId, @PathVariable Long id,
-                            @Valid @RequestBody UpdateCartItemRequest request) {
-        cartService.updateItem(userId, id, request);
-    }
+  @PutMapping("/items/{id}")
+  public void updateItem(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal,
+      @PathVariable Long id,
+      @Valid @RequestBody UpdateCartItemRequest request) {
+    cartService.updateItem(principal.getId(), id, request);
+  }
 
-    @DeleteMapping("/items/{id}")
-    public void removeItem(@RequestParam Long userId, @PathVariable Long id) {
-        cartService.removeItem(userId, id);
-    }
+  @DeleteMapping("/items/{id}")
+  public void removeItem(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal
+          com.utetra.security.UserPrincipal principal,
+      @PathVariable Long id) {
+    cartService.removeItem(principal.getId(), id);
+  }
 }
