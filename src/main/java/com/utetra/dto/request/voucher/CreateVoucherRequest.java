@@ -5,38 +5,33 @@ import com.utetra.enums.VoucherType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
 public class CreateVoucherRequest {
 
-    @NotBlank
-    private String code;
+  @NotBlank private String code;
 
-    @NotNull
-    private VoucherType voucherType;
+  @NotNull private VoucherType voucherType;
 
-    @NotNull
-    private DiscountType discountType;
+  @NotNull private DiscountType discountType;
 
-    @NotNull
-    @Positive
-    private BigDecimal discountValue;
+  @NotNull
+  @Positive
+  @jakarta.validation.constraints.Digits(integer = 10, fraction = 2)
+  private BigDecimal discountValue;
 
-    private BigDecimal minOrderAmount;
+  private BigDecimal minOrderAmount;
 
-    private BigDecimal maxDiscountAmount;
+  private BigDecimal maxDiscountAmount;
 
-    private Integer usageLimit;
+  private Integer usageLimit;
 
-    @NotNull
-    private LocalDateTime startDate;
+  @NotNull private LocalDateTime startDate;
 
-    @NotNull
-    private LocalDateTime endDate;
+  @NotNull private LocalDateTime endDate;
 }

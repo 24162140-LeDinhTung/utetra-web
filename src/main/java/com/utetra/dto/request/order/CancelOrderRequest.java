@@ -8,6 +8,7 @@ import lombok.Setter;
 @Setter
 public class CancelOrderRequest {
 
-    @NotBlank
-    private String reason;
+  @NotBlank
+  @jakarta.validation.constraints.Size(max = 255)
+  private String reason;
 }

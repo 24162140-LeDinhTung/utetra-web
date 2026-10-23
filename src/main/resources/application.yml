@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:classpath:application-commerce.yml
   application:
     name: utetra
 
@@ -44,6 +46,9 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 100MB
+    encoding:
+      charset: UTF-8
+      force: true
 
   mvc:
     view:
@@ -52,6 +57,7 @@ spring:
 
 server:
   port: 8080
+ 
 
 jwt:
   secret: utetra-super-secret-key-change-in-production-minimum-256-bits-for-hs256-algorithm

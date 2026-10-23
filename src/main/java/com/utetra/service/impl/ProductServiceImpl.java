@@ -1,147 +1,227 @@
 package com.utetra.service.impl;
 
-import com.utetra.dto.request.product.CreateProductRequest;
-import com.utetra.dto.request.product.ProductSearchRequest;
-import com.utetra.dto.request.product.UpdateProductRequest;
-import com.utetra.dto.response.product.ProductDetailResponse;
-import com.utetra.dto.response.product.ProductResponse;
-import com.utetra.dto.response.product.ProductSearchResponse;
-import com.utetra.entity.Category;
-import com.utetra.entity.Product;
-import com.utetra.entity.Shop;
+import com.utetra.dto.request.product.*;
+import com.utetra.dto.response.product.*;
+import com.utetra.entity.*;
 import com.utetra.enums.ProductStatus;
 import com.utetra.exception.custom.ResourceNotFoundException;
-import com.utetra.mapper.ProductMapper;
-import com.utetra.repository.CategoryRepository;
-import com.utetra.repository.ProductRepository;
-import com.utetra.repository.ShopRepository;
-import com.utetra.service.ProductService;
+import com.utetra.repository.*;
+import com.utetra.service.*;
 import com.utetra.util.SlugUtil;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ProductServiceImpl implements ProductService {
+  private final ProductRepository products;
+  private final CategoryRepository categories;
+  private final ShopRepository shops;
+  private final ProductImageRepository images;
+  private final ProductAttributeRepository attributes;
+  private final ProductAttributeValueRepository values;
+  private final ProductViewLogRepository views;
+  private final CommerceAccess access;
 
-    private final ProductRepository productRepository;
-    private final CategoryRepository categoryRepository;
-    private final ShopRepository shopRepository;
-    private final ProductMapper productMapper;
+  private Category category(Long id) {
+    return categories
+        .findById(id)
+        .filter(c -> !Boolean.TRUE.equals(c.getIsDeleted()))
+        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục"));
+  }
 
-    @Override
-    public Product create(Long shopId, CreateProductRequest request) {
-        Shop shop = shopRepository.findById(shopId)
-                .orElseThrow(() -> new ResourceNotFoundException("Shop not found: " + shopId));
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + request.getCategoryId()));
+  @Transactional
+  public Product create(Long shopId, Long ownerId, CreateProductRequest r) {
+    Product p = new Product();
+    p.setShop(access.shop(shopId, ownerId));
+    p.setCategory(category(r.getCategoryId()));
+    p.setName(r.getName().trim());
+    p.setSlug(SlugUtil.toSlug(r.getName()) + "-" + UUID.randomUUID().toString().substring(0, 12));
+    p.setDescription(r.getDescription());
+    p.setPrice(r.getPrice());
+    p.setStock(r.getStock());
+    p.setSoldCount(0);
+    p.setStatus(ProductStatus.PENDING);
+    return products.save(p);
+  }
 
-        Product product = new Product();
-        product.setShop(shop);
-        product.setCategory(category);
-        product.setName(request.getName());
-        product.setSlug(SlugUtil.toSlug(request.getName()));
-        product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice());
-        product.setStock(request.getStock());
-        product.setSoldCount(0);
-        product.setStatus(ProductStatus.PENDING);
+  @Transactional
+  public Product update(Long id, Long ownerId, UpdateProductRequest r) {
+    Product p =
+        products
+            .lockById(id)
+            .filter(x -> !Boolean.TRUE.equals(x.getIsDeleted()))
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm"));
+    access.shop(p.getShop().getId(), ownerId);
+    p.setCategory(category(r.getCategoryId()));
+    p.setName(r.getName().trim());
+    p.setDescription(r.getDescription());
+    p.setPrice(r.getPrice());
+    p.setStock(r.getStock());
+    return products.save(p);
+  }
 
-        return productRepository.save(product);
+  @Transactional
+  public void softDeleteProduct(Long id, Long ownerId) {
+    Product p =
+        products
+            .lockById(id)
+            .filter(x -> !Boolean.TRUE.equals(x.getIsDeleted()))
+            .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm"));
+    access.shop(p.getShop().getId(), ownerId);
+    p.setIsDeleted(true);
+    products.save(p);
+  }
+
+  @Transactional
+  public ProductDetailResponse getDetail(Long id, Long viewerId) {
+    Product p = access.product(id);
+    if (p.getStatus() != ProductStatus.ACTIVE
+        || Boolean.TRUE.equals(p.getShop().getIsDeleted())
+        || Boolean.TRUE.equals(p.getCategory().getIsDeleted()))
+      throw new ResourceNotFoundException("Sản phẩm chưa được mở bán");
+    if (viewerId != null) {
+      ProductViewLog v = new ProductViewLog();
+      v.setUserId(viewerId);
+      v.setProduct(p);
+      views.save(v);
     }
+    return detail(p);
+  }
 
-    @Override
-    public Product update(Long id, UpdateProductRequest request) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found: " + request.getCategoryId()));
+  public ProductDetailResponse getVendorDetail(Long shopId, Long id, Long ownerId) {
+    return detail(access.product(shopId, id, ownerId));
+  }
 
-        product.setCategory(category);
-        product.setName(request.getName());
-        product.setSlug(SlugUtil.toSlug(request.getName()));
-        product.setDescription(request.getDescription());
-        product.setPrice(request.getPrice());
-        product.setStock(request.getStock());
+  public ProductSearchResponse getVendorProducts(Long shopId, Long ownerId, Pageable page) {
+    access.shop(shopId, ownerId);
+    return result(products.findByShopIdAndIsDeletedFalse(shopId, page));
+  }
 
-        return productRepository.save(product);
-    }
+  public ProductSearchResponse search(ProductSearchRequest r) {
+    if (r.getPage() < 0 || r.getSize() < 1 || r.getSize() > 100)
+      throw new IllegalArgumentException("Phân trang không hợp lệ");
+    String keyword =
+        r.getKeyword() == null || r.getKeyword().isBlank() ? null : r.getKeyword().trim();
+    String field = "createdAt";
+    Sort.Direction direction = Sort.Direction.DESC;
+    if ("price_asc".equals(r.getSort())) {
+      field = "price";
+      direction = Sort.Direction.ASC;
+    } else if ("price_desc".equals(r.getSort())) field = "price";
+    else if ("best_selling".equals(r.getSort())) field = "soldCount";
+    return result(
+        products.search(
+            r.getShopId(),
+            r.getCategoryId(),
+            keyword,
+            PageRequest.of(
+                r.getPage(), r.getSize(), Sort.by(direction, field).and(Sort.by("id")))));
+  }
 
-    @Override
-    public void softDeleteProduct(Long id) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
-        product.setIsDeleted(true);
-        productRepository.save(product);
-    }
+  public ProductSearchResponse getHomeProducts() {
+    ProductSearchRequest r = new ProductSearchRequest();
+    r.setSort("best_selling");
+    return search(r);
+  }
 
-    @Override
-    public ProductDetailResponse getDetail(Long id, Long viewerUserId) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + id));
+  public ProductSearchResponse getProductsByShop(Long shopId) {
+    ProductSearchRequest r = new ProductSearchRequest();
+    r.setShopId(shopId);
+    r.setSort("best_selling");
+    return search(r);
+  }
 
-        ProductDetailResponse response = new ProductDetailResponse();
-        response.setId(product.getId());
-        response.setName(product.getName());
-        response.setSlug(product.getSlug());
-        response.setDescription(product.getDescription());
-        response.setPrice(product.getPrice());
-        response.setStock(product.getStock());
-        response.setSoldCount(product.getSoldCount());
-        response.setStatus(product.getStatus().name());
-        response.setCategoryId(product.getCategory().getId());
-        response.setCategoryName(product.getCategory().getName());
-        response.setShopId(product.getShop().getId());
-        response.setShopName(product.getShop().getName());
-        // imageUrls và attributes sẽ bổ sung khi có ProductImageService/ProductAttributeService
-        return response;
-    }
+  public Page<ShopProductsResponse> getHomeShops(Pageable page) {
+    return shops
+        .findByIsDeletedFalse(page)
+        .map(
+            s -> {
+              Page<Product> p =
+                  products.search(
+                      s.getId(),
+                      null,
+                      null,
+                      PageRequest.of(
+                          0, 12, Sort.by(Sort.Direction.DESC, "soldCount").and(Sort.by("id"))));
+              return new ShopProductsResponse(
+                  s.getId(), s.getName(), p.map(this::summary).getContent(), p.getTotalElements());
+            });
+  }
 
-    @Override
-    public ProductSearchResponse search(ProductSearchRequest request) {
-        Pageable pageable = PageRequest.of(request.getPage(), request.getSize());
-        Page<Product> page;
+  private ProductResponse summary(Product p) {
+    ProductResponse r = new ProductResponse();
+    r.setId(p.getId());
+    r.setName(p.getName());
+    r.setSlug(p.getSlug());
+    r.setPrice(p.getPrice());
+    r.setStock(p.getStock());
+    r.setSoldCount(p.getSoldCount());
+    r.setStatus(p.getStatus().name());
+    r.setShopId(p.getShop().getId());
+    r.setShopName(p.getShop().getName());
+    r.setThumbnailUrl(
+        images.findByProductIdAndIsDeletedFalseOrderBySortOrderAscIdAsc(p.getId()).stream()
+            .findFirst()
+            .map(ProductImage::getImageUrl)
+            .orElse(""));
+    return r;
+  }
 
-        if (request.getKeyword() != null && !request.getKeyword().isBlank()) {
-            page = productRepository.findByNameContainingIgnoreCaseAndStatus(
-                    request.getKeyword(), ProductStatus.ACTIVE, pageable);
-        } else if (request.getCategoryId() != null) {
-            page = productRepository.findByCategoryIdAndStatus(
-                    request.getCategoryId(), ProductStatus.ACTIVE, pageable);
-        } else if (request.getShopId() != null) {
-            page = productRepository.findByShopIdAndStatus(
-                    request.getShopId(), ProductStatus.ACTIVE, pageable);
-        } else {
-            page = productRepository.findAll(pageable);
-        }
+  private ProductSearchResponse result(Page<Product> p) {
+    ProductSearchResponse r = new ProductSearchResponse();
+    r.setItems(p.map(this::summary).getContent());
+    r.setPage(p.getNumber());
+    r.setSize(p.getSize());
+    r.setTotalElements(p.getTotalElements());
+    r.setTotalPages(p.getTotalPages());
+    return r;
+  }
 
-        return toSearchResponse(page);
-    }
-
-    @Override
-    public ProductSearchResponse getHomeProducts() {
-        // Sản phẩm bán chạy nhất, sort theo soldCount DESC (README mục 3.3)
-        Pageable pageable = PageRequest.of(0, 20);
-        Page<Product> page = productRepository.findAll(pageable);
-        return toSearchResponse(page);
-    }
-
-    private ProductSearchResponse toSearchResponse(Page<Product> page) {
-        List<ProductResponse> items = page.getContent().stream()
-                .map(productMapper::toResponse)
-                .toList();
-
-        ProductSearchResponse response = new ProductSearchResponse();
-        response.setItems(items);
-        response.setPage(page.getNumber());
-        response.setSize(page.getSize());
-        response.setTotalElements(page.getTotalElements());
-        response.setTotalPages(page.getTotalPages());
-        return response;
-    }
+  private ProductDetailResponse detail(Product p) {
+    ProductDetailResponse r = new ProductDetailResponse();
+    r.setId(p.getId());
+    r.setName(p.getName());
+    r.setSlug(p.getSlug());
+    r.setDescription(p.getDescription());
+    r.setPrice(p.getPrice());
+    r.setStock(p.getStock());
+    r.setSoldCount(p.getSoldCount());
+    r.setStatus(p.getStatus().name());
+    r.setCategoryId(p.getCategory().getId());
+    r.setCategoryName(p.getCategory().getName());
+    r.setShopId(p.getShop().getId());
+    r.setShopName(p.getShop().getName());
+    r.setImageUrls(
+        images.findByProductIdAndIsDeletedFalseOrderBySortOrderAscIdAsc(p.getId()).stream()
+            .map(ProductImage::getImageUrl)
+            .toList());
+    r.setAttributes(
+        attributes.findByProductIdAndIsDeletedFalseOrderByIdAsc(p.getId()).stream()
+            .map(
+                a -> {
+                  ProductAttributeResponse x = new ProductAttributeResponse();
+                  x.setAttributeId(a.getId());
+                  x.setAttributeName(a.getName());
+                  x.setValues(
+                      values.findByAttributeIdAndIsDeletedFalseOrderByIdAsc(a.getId()).stream()
+                          .map(
+                              v -> {
+                                ProductAttributeResponse.ValueItem y =
+                                    new ProductAttributeResponse.ValueItem();
+                                y.setValueId(v.getId());
+                                y.setValue(v.getValue());
+                                y.setExtraPrice(v.getExtraPrice());
+                                return y;
+                              })
+                          .toList());
+                  return x;
+                })
+            .toList());
+    return r;
+  }
 }

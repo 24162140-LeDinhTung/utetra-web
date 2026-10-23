@@ -5,35 +5,30 @@ import com.utetra.enums.PromotionType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Setter
 public class CreatePromotionRequest {
 
-    @NotBlank
-    private String name;
+  @NotBlank private String name;
 
-    @NotNull
-    private PromotionType promotionType;
+  @NotNull private PromotionType promotionType;
 
-    @NotNull
-    private DiscountType discountType;
+  @NotNull private DiscountType discountType;
 
-    @NotNull
-    @Positive
-    private BigDecimal discountValue;
+  @NotNull
+  @Positive
+  @jakarta.validation.constraints.Digits(integer = 10, fraction = 2)
+  private BigDecimal discountValue;
 
-    @NotNull
-    private LocalDateTime startDate;
+  @NotNull private LocalDateTime startDate;
 
-    @NotNull
-    private LocalDateTime endDate;
+  @NotNull private LocalDateTime endDate;
 
-    private List<Long> productIds;
+  private List<Long> productIds;
 }

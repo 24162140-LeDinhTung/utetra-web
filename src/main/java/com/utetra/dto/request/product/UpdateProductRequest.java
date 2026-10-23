@@ -4,28 +4,26 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.math.BigDecimal;
 
 @Getter
 @Setter
 public class UpdateProductRequest {
 
-    @NotNull
-    private Long categoryId;
+  @NotNull private Long categoryId;
 
-    @NotBlank
-    private String name;
+  @NotBlank
+  @jakarta.validation.constraints.Size(max = 255)
+  private String name;
 
-    private String description;
+  private String description;
 
-    @NotNull
-    @Positive
-    private BigDecimal price;
+  @NotNull
+  @Positive
+  @jakarta.validation.constraints.Digits(integer = 10, fraction = 0)
+  private BigDecimal price;
 
-    @NotNull
-    @PositiveOrZero
-    private Integer stock;
+  @NotNull @PositiveOrZero private Integer stock;
 }

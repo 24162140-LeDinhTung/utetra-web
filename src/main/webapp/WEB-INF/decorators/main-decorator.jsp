@@ -15,10 +15,14 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand text-warning fw-bold" href="/">☕ UTETra</a>
-            <div class="collapse navbar-collapse">
+            <div class="navbar-collapse d-flex flex-wrap gap-3">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="/">Trang chủ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/api/products">Sản phẩm</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/products">Sản phẩm</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/customer/cart">Giỏ hàng</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/customer/orders">Đơn hàng</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/vendor/products">Người bán</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/admin/categories">Quản trị</a></li>
                 </ul>
                 <!-- Vùng chứa các nút Đăng nhập / Tài khoản -->
                 <div class="d-flex" id="auth-buttons">
