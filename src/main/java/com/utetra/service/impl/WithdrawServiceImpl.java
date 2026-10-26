@@ -42,7 +42,8 @@ public class WithdrawServiceImpl implements WithdrawService {
 
     @Override
     public List<WithdrawRequest> getPendingRequests() {
-        return withdrawRepository.findAll().stream()
+        // Dùng hàm mới vừa tạo để lấy dữ liệu kèm Wallet và Shop
+        return withdrawRepository.findAllWithWalletAndShop().stream()
                 .filter(r -> "PENDING".equals(r.getStatus()))
                 .collect(Collectors.toList());
     }

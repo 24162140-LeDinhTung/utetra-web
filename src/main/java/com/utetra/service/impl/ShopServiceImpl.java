@@ -67,7 +67,8 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     public Page<Shop> getShopsByStatus(ShopStatus status, Pageable pageable) {
-        return shopRepository.findByStatusAndIsDeletedFalse(status, pageable);
+        // Đổi từ findByStatusAndIsDeletedFalse thành findByStatusWithOwner
+        return shopRepository.findByStatusWithOwner(status, pageable); 
     }
 
     @Override
