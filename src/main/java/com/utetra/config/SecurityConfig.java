@@ -57,7 +57,7 @@ public class SecurityConfig {
                         "/",
                         "/auth/**",
                         "/error",
-                        "/favicon.ico", // <-- Thêm dòng này để mở khóa trang chủ và trang đăng nhập
+                        "/favicon.ico",
                         "/api/auth/**",
                         "/products",
                         "/products/**",
@@ -74,10 +74,27 @@ public class SecurityConfig {
                         "/vendor/orders/*",
                         "/vendor/vouchers",
                         "/vendor/promotions",
+                        
+                        // ===== PHẦN C BỔ SUNG (VENDOR) =====
+                        "/vendor/shops",
+                        "/vendor/shops/**",
+                        "/vendor/withdraw/**",
+                        "/vendor/shops/*/wallet",
+                        
+                        // ===== PHẦN C BỔ SUNG (ADMIN) =====
                         "/admin/categories",
                         "/admin/category-form",
                         "/admin/attributes",
                         "/admin/attribute-form",
+                        "/admin/shops",
+                        "/admin/shops/**",
+                        "/admin/withdraw",
+                        "/admin/withdraw/**",
+                        "/admin/users",      // <-- MỚI THÊM
+                        "/admin/products",   // <-- MỚI THÊM
+                        "/admin/dashboard",
+                        // ====================================
+
                         "/ws",
                         "/ws/**",
                         "/ws-native",
@@ -92,7 +109,7 @@ public class SecurityConfig {
                         "/images/**",
                         "/fonts/**",
                         "/WEB-INF/views/**",
-                        "/WEB-INF/decorators/**" // <-- Thêm để cho phép load JSP
+                        "/WEB-INF/decorators/**"
                         )
                     .permitAll()
 
