@@ -18,10 +18,18 @@ public class SitemeshConfig {
         new ConfigurableSiteMeshFilter() {
           @Override
           protected void applyCustomConfiguration(SiteMeshFilterBuilder builder) {
-            // Decorate HTML only; leave API and WebSocket responses untouched.
             builder
-                .addDecoratorPath("/*", "main-decorator.jsp")
+                // 1. Cấu hình riêng cho Vendor và Admin (Phải đặt lên đầu)
+                .addDecoratorPath("/vendor/*", "vendor-decorator.jsp")
+                .addDecoratorPath("/admin/*", "admin-decorator.jsp")
+                
+                // 2. Cấu hình cho Auth (Đăng nhập/Đăng ký)
                 .addDecoratorPath("/auth/*", "auth-decorator.jsp")
+                
+                // 3. Cấu hình mặc định cho Khách/Customer (Phải đặt ở dưới cùng)
+                .addDecoratorPath("/*", "main-decorator.jsp")
+                
+                // 4. Loại trừ các đường dẫn không cần giao diện
                 .addExcludedPath("/api/*")
                 .addExcludedPath("/ws/*")
                 .addExcludedPath("/ws-native")
@@ -35,7 +43,6 @@ public class SitemeshConfig {
         });
 
     filter.addUrlPatterns("/*");
-    // Bắt buộc phải set Order cao nhất để Sitemesh chạy trước Spring Security
     filter.setOrder(Ordered.HIGHEST_PRECEDENCE);
     return filter;
   }

@@ -1,11 +1,19 @@
 spring:
+  datasource:
+    # Kết nối tới MySQL trong Docker
+    url: jdbc:mysql://localhost:3306/utetra_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
+    username: utetra_user
+    password: utetra_pass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
-      ddl-auto: update # Lệnh này giúp tự động tạo bảng còn thiếu từ code của B
+      ddl-auto: update # Lệnh này giúp tự động tạo bảng
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
 
 logging:
   level:
