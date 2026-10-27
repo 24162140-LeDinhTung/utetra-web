@@ -1,0 +1,14 @@
+package com.utetra.repository;
+
+import com.utetra.entity.Cart;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface CartRepository extends JpaRepository<Cart, Long> {
+
+    Optional<Cart> findByUserIdAndShopId(Long userId, Long shopId);
+
+    List<Cart> findByUserId(Long userId);
+}

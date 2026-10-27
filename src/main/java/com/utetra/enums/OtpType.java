@@ -1,0 +1,7 @@
+package com.utetra.enums;
+
+public enum OtpType {
+    REGISTER,
+    FORGOT_PASSWORD,
+    CHANGE_EMAIL
+}
