@@ -142,7 +142,7 @@
             });
         }
 
-     // --- TAB 2: YÊU THÍCH ---
+        // --- TAB 2: YÊU THÍCH ---
         function loadFavorites() {
             const list = document.getElementById('favorite-list');
             list.innerHTML = '<div class="spinner-border text-warning"></div>';
@@ -153,18 +153,19 @@
                 if(data.code === 200 && data.data.length > 0) {
                     data.data.forEach(p => {
                         const imgUrl = p.thumbnailUrl || 'https://via.placeholder.com/150';
-                        list.innerHTML += `
-                            <div class="col-6 col-md-4">
-                                <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden">
-                                    <img src="${imgUrl}" style="height: 120px; object-fit: cover;">
-                                    <div class="card-body p-2 text-center">
-                                        <h6 class="text-truncate small fw-bold">${p.productName}</h6>
-                                        <!-- THÊM CONTEXT PATH VÀO ĐÂY -->
-                                        <a href="${pageContext.request.contextPath}/products/${p.productId}" class="btn btn-sm btn-outline-warning w-100 mt-2">Xem</a>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        
+                        // NỐI CHUỖI BẰNG DẤU + ĐỂ LÁCH LỖI JSP EL
+                        const html = '<div class="col-6 col-md-4">' +
+                            '<div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden">' +
+                                '<img src="' + imgUrl + '" style="height: 120px; object-fit: cover;">' +
+                                '<div class="card-body p-2 text-center">' +
+                                    '<h6 class="text-truncate small fw-bold">' + p.productName + '</h6>' +
+                                    '<a href="/products/' + p.productId + '" class="btn btn-sm btn-outline-warning w-100 mt-2">Xem</a>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                        
+                        list.innerHTML += html;
                     });
                 } else {
                     list.innerHTML = '<p class="text-muted w-100">Chưa có sản phẩm yêu thích nào.</p>';
@@ -183,18 +184,19 @@
                 if(data.code === 200 && data.data.length > 0) {
                     data.data.forEach(p => {
                         const imgUrl = p.thumbnailUrl || 'https://via.placeholder.com/150';
-                        list.innerHTML += `
-                            <div class="col-6 col-md-4">
-                                <div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden">
-                                    <img src="${imgUrl}" style="height: 120px; object-fit: cover;">
-                                    <div class="card-body p-2 text-center">
-                                        <h6 class="text-truncate small fw-bold">${p.productName}</h6>
-                                        <!-- THÊM CONTEXT PATH VÀO ĐÂY -->
-                                        <a href="${pageContext.request.contextPath}/products/${p.productId}" class="btn btn-sm btn-outline-primary w-100 mt-2">Xem lại</a>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
+                        
+                        // NỐI CHUỖI BẰNG DẤU + ĐỂ LÁCH LỖI JSP EL
+                        const html = '<div class="col-6 col-md-4">' +
+                            '<div class="card h-100 border-0 shadow-sm rounded-3 overflow-hidden">' +
+                                '<img src="' + imgUrl + '" style="height: 120px; object-fit: cover;">' +
+                                '<div class="card-body p-2 text-center">' +
+                                    '<h6 class="text-truncate small fw-bold">' + p.productName + '</h6>' +
+                                    '<a href="/products/' + p.productId + '" class="btn btn-sm btn-outline-primary w-100 mt-2">Xem lại</a>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>';
+                        
+                        list.innerHTML += html;
                     });
                 } else {
                     list.innerHTML = '<p class="text-muted w-100">Chưa có lịch sử xem.</p>';

@@ -56,14 +56,7 @@ public class HomeController {
         return "guest/product-detail";
     }
 
-    // 4. LƯỚI HỨNG (Bắt lỗi khi ai đó quên ID)
-    // Khi có ai đó gọi /products/ (có dấu gạch chéo ở cuối mà không có ID),
-    // Spring Boot sẽ gọi hàm này để tự động chuyển hướng về /products
-    @GetMapping("/products/")
-    public String productSlash() {
-        System.out.println(">>> LƯỚI HỨNG: Đã bắt được request thiếu ID tại /products/. Tự động chuyển hướng về /products");
-        return "redirect:/products";
-    }
+   
 
     // 5. Trang chi tiết cửa hàng (click vào Shop ở trang chủ)
     @Transactional(readOnly = true) 
