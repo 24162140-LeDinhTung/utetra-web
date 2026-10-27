@@ -60,7 +60,8 @@
                 if (data.code === 200) {
                     // Lưu token vào localStorage
                     localStorage.setItem('accessToken', data.data.accessToken);
-                    localStorage.setItem('userRole', data.data.roles[0]);
+                    document.cookie = "accessToken=" + data.data.accessToken + "; path=/";
+					localStorage.setItem('userRoles', JSON.stringify(data.data.roles)); 
                     
                     alert('Đăng nhập thành công!');
                     

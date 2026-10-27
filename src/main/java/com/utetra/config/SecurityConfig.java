@@ -23,112 +23,85 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-  private final CustomUserDetailsService userDetailsService;
-  private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomUserDetailsService userDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-  @Bean
-  public PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder();
-  }
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-  @Bean
-  public DaoAuthenticationProvider authenticationProvider() {
-    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
-    provider.setPasswordEncoder(passwordEncoder());
-    return provider;
-  }
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
 
-  @Bean
-  public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-      throws Exception {
-    return config.getAuthenticationManager();
-  }
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
+            throws Exception {
+        return config.getAuthenticationManager();
+    }
 
-  @Bean
-  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.csrf(csrf -> csrf.disable())
-        .sessionManagement(
-            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(
-            auth ->
-                auth
-                    // 1. CHO PHÉP TRUY CẬP CÁC TRANG GIAO DIỆN VÀ API CÔNG KHAI
-                    .requestMatchers(
-                        "/",
-                        "/auth/**",
-                        "/error",
-                        "/favicon.ico",
-                        "/api/auth/**",
-                        "/products",
-                        "/products/**",
-                        "/api/categories",
-                        "/customer/cart",
-                        "/customer/checkout",
-                        "/customer/orders",
-                        "/customer/orders/*",
-                        "/customer/payment",
-                        "/customer/review",
-                        "/vendor/products",
-                        "/vendor/product-form",
-                        "/vendor/orders",
-                        "/vendor/orders/*",
-                        "/vendor/vouchers",
-                        "/vendor/promotions",
-                        
-                        // ===== PHẦN C BỔ SUNG (VENDOR) =====
-                        "/vendor/shops",
-                        "/vendor/shops/**",
-                        "/vendor/withdraw/**",
-                        "/vendor/shops/*/wallet",
-                        
-                        // ===== PHẦN C BỔ SUNG (ADMIN) =====
-                        "/admin/categories",
-                        "/admin/category-form",
-                        "/admin/attributes",
-                        "/admin/attribute-form",
-                        "/admin/shops",
-                        "/admin/shops/**",
-                        "/admin/withdraw",
-                        "/admin/withdraw/**",
-                        "/admin/users",      // <-- MỚI THÊM
-                        "/admin/products",   // <-- MỚI THÊM
-                        "/admin/dashboard",
-                        // ====================================
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            
+            // XỬ LÝ CHUYỂN HƯỚNG KHI LỖI
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    // Chưa đăng nhập -> Về trang Login
+                    if (request.getRequestURI().startsWith("/vendor") || request.getRequestURI().startsWith("/admin")) {
+                        response.sendRedirect(request.getContextPath() + "/auth/login");
+                    } else {
+                        response.sendError(401, "Unauthorized");
+                    }
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    // Đã đăng nhập nhưng không đủ quyền (Customer vào Vendor/Admin) -> Chuyển sang trang báo lỗi 403
+                    response.sendRedirect(request.getContextPath() + "/error/403");
+                })
+            )
 
-                        "/ws",
-                        "/ws/**",
-                        "/ws-native",
-                        "/api/payment/vnpay/ipn",
-                        "/api/payment/momo/ipn",
-                        "/api/products/**",
-                        "/api/shops/**",
-                        "/api/users/*/public",
-                        "/static/**",
-                        "/css/**",
-                        "/js/**",
-                        "/images/**",
-                        "/fonts/**",
-                        "/WEB-INF/views/**",
-                        "/WEB-INF/decorators/**"
-                        )
-                    .permitAll()
+            .authorizeHttpRequests(auth -> auth
+                
+                // 1. CÁC TRANG CÔNG KHAI & TÀI NGUYÊN TĨNH
+                .requestMatchers(
+                    "/", 
+                    "/auth/**", 
+                    "/error/**", // Mở khóa đường dẫn /error để trang báo lỗi có thể hiển thị
+                    "/favicon.ico",
+                    "/products", "/products/**",
+                    "/shops", "/shops/**",
+                    "/ws", "/ws/**", "/ws-native",
+                    "/static/**", "/css/**", "/js/**", "/images/**", "/fonts/**"
+                ).permitAll()
 
-                    // 2. PHÂN QUYỀN CHO CÁC API
-                    .requestMatchers("/api/payment/vnpay", "/api/payment/momo")
-                    .authenticated()
-                    .requestMatchers("/api/customer/**")
-                    .hasAuthority("ROLE_CUSTOMER")
-                    .requestMatchers("/api/vendor/**")
-                    .hasAnyAuthority("ROLE_VENDOR", "ROLE_ADMIN")
-                    .requestMatchers("/api/admin/**")
-                    .hasAuthority("ROLE_ADMIN")
+                // 2. CÁC API CÔNG KHAI
+                .requestMatchers(
+                    "/api/auth/**",
+                    "/api/products/**",
+                    "/api/shops/**",
+                    "/api/categories/**",
+                    "/api/users/*/public",
+                    "/api/payment/vnpay/ipn", 
+                    "/api/payment/momo/ipn"
+                ).permitAll()
 
-                    // 3. CÁC REQUEST KHÁC PHẢI ĐĂNG NHẬP
-                    .anyRequest()
-                    .authenticated())
-        .authenticationProvider(authenticationProvider())
-        .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // 3. SIẾT CHẶT QUYỀN TRUY CẬP
+                .requestMatchers("/vendor/**", "/api/vendor/**").hasAnyAuthority("ROLE_VENDOR", "ROLE_ADMIN")
+                .requestMatchers("/admin/**", "/api/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/customer/**", "/api/customer/**").hasAnyAuthority("ROLE_CUSTOMER", "ROLE_VENDOR", "ROLE_ADMIN")
+                .requestMatchers("/api/payment/vnpay", "/api/payment/momo").authenticated()
 
-    return http.build();
-  }
+                // 4. CÁC REQUEST KHÁC PHẢI ĐĂNG NHẬP
+                .anyRequest().authenticated()
+            )
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
 }

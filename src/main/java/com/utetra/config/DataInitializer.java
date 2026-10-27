@@ -27,9 +27,9 @@ public class DataInitializer implements CommandLineRunner {
         if (userRepository.findByEmail("test@gmail.com").isEmpty()) {
             User user = new User();
             user.setEmail("test@gmail.com");
-            user.setPassword(passwordEncoder.encode("123456")); // Password là: 123456
+            user.setPassword(passwordEncoder.encode("123456"));
             user.setFullName("Người Dùng Test");
-            user.setStatus(UserStatus.ACTIVE); // Kích hoạt sẵn
+            user.setStatus(UserStatus.ACTIVE);
             user.setEmailVerified(true);
 
             Role role = roleRepository.findByName(RoleName.ROLE_CUSTOMER)
@@ -44,7 +44,7 @@ public class DataInitializer implements CommandLineRunner {
         if (userRepository.findByEmail("admin@utetra.com").isEmpty()) {
             User admin = new User();
             admin.setEmail("admin@utetra.com");
-            admin.setPassword(passwordEncoder.encode("123456")); // Password là: 123456
+            admin.setPassword(passwordEncoder.encode("123456"));
             admin.setFullName("Quản Trị Viên");
             admin.setStatus(UserStatus.ACTIVE); 
             admin.setEmailVerified(true);
@@ -55,6 +55,34 @@ public class DataInitializer implements CommandLineRunner {
 
             userRepository.save(admin);
             log.info("✅ Đã tạo tài khoản Admin: admin@utetra.com / 123456");
+        }
+
+        // 3. Tạo tài khoản Vendor (Người bán) - MỚI THÊM
+        if (userRepository.findByEmail("vendor@utetra.com").isEmpty()) {
+            User vendor = new User();
+            vendor.setEmail("vendor@utetra.com");
+            vendor.setPassword(passwordEncoder.encode("123456"));
+            vendor.setFullName("Chủ Cửa Hàng");
+            vendor.setStatus(UserStatus.ACTIVE);
+            vendor.setEmailVerified(true);
+
+            Role roleVendor = roleRepository.findByName(RoleName.ROLE_VENDOR)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy Role VENDOR"));
+            vendor.getRoles().add(roleVendor);
+
+            userRepository.save(vendor);
+            log.info("✅ Đã tạo tài khoản Vendor: vendor@utetra.com / 123456");
+        }
+
+        // 4. Cấp thêm quyền Vendor cho user test@gmail.com (để test dễ dàng)
+        User testUser = userRepository.findByEmail("test@gmail.com").orElse(null);
+        if (testUser != null) {
+            Role roleVendor = roleRepository.findByName(RoleName.ROLE_VENDOR).orElse(null);
+            if (roleVendor != null && !testUser.getRoles().contains(roleVendor)) {
+                testUser.getRoles().add(roleVendor);
+                userRepository.save(testUser);
+                log.info("✅ Đã cấp quyền Vendor cho test@gmail.com");
+            }
         }
     }
 }

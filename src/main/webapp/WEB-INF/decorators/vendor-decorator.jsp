@@ -70,12 +70,12 @@
             
             <span class="sidebar-heading">Kinh doanh</span>
             <li class="nav-item">
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="${pageContext.request.contextPath}/vendor/products">
                     <i class="bi bi-box-seam"></i> Quản lý Sản phẩm
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="${pageContext.request.contextPath}/vendor/orders">
                     <i class="bi bi-receipt"></i> Quản lý Đơn hàng
                 </a>
             </li>
@@ -85,10 +85,10 @@
     <!-- Nội dung chính -->
     <div class="main-content">
         <div class="container-fluid">
-            <!-- Sitemesh 3 tự động nhúng body -->
+            <!-- Thẻ này sẽ lấy toàn bộ body từ shop-list.jsp chèn vào đây -->
+            <sitemesh:write property='body'/>
         </div>
     </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

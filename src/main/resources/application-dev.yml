@@ -1,14 +1,14 @@
 spring:
   datasource:
-    # Kết nối tới MySQL trong Docker
-    url: jdbc:mysql://localhost:3306/utetra_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
-    username: utetra_user
-    password: utetra_pass
+    # Kết nối tới MySQL trong Docker (Đã đổi port về 3307 cho khớp với docker-compose.yml)
+    url: jdbc:mysql://localhost:3307/utetra_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
+    username: utetra       # Đã đổi về utetra
+    password: utetra123    # Đã đổi về utetra123
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update # Lệnh này giúp tự động tạo bảng
+      ddl-auto: update   # Đã đổi từ update thành validate (vì chúng ta dùng Flyway quản lý DB)
     show-sql: true
     properties:
       hibernate:

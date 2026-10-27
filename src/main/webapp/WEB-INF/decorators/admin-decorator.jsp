@@ -98,7 +98,7 @@
     <!-- Nội dung chính -->
     <div class="main-content">
         <div class="container-fluid">
-            <!-- Sitemesh 3 sẽ tự động nhúng nội dung của các trang JSP con vào đây -->
+            <sitemesh:write property='body'/>
         </div>
     </div>
 
