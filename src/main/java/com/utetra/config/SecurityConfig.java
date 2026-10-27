@@ -70,7 +70,10 @@ public class SecurityConfig {
                 // 1. CÁC TRANG CÔNG KHAI & TÀI NGUYÊN TĨNH
                 .requestMatchers(
                     "/", 
-                    "/auth/**", 
+                    "/WEB-INF/**",
+                    "/test",
+                    "/auth/**",
+                    "/error",
                     "/error/**", // Mở khóa đường dẫn /error để trang báo lỗi có thể hiển thị
                     "/favicon.ico",
                     "/products", "/products/**",

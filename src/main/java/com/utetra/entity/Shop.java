@@ -4,6 +4,7 @@ import com.utetra.enums.ShopStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "shops")
@@ -29,7 +30,6 @@ public class Shop extends BaseEntity {
     @Column(name = "cover_url")
     private String coverUrl;
 
-    // === QUAN TRỌNG: Bắt buộc phải có status ở đây ===
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
     private ShopStatus status; 
@@ -37,6 +37,30 @@ public class Shop extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shop_level_id")
     private ShopLevel shopLevel;
+
+    // ==========================================
+    // BỔ SUNG CÁC TRƯỜNG CÒN THIẾU TỪ DATABASE (V4)
+    // ==========================================
+    
+    @Column(name = "address", length = 500)
+    private String address;
+
+    @Column(name = "phone", length = 20)
+    private String phone;
+
+    @Column(name = "email", length = 255)
+    private String email;
+
+    @Column(name = "slug", unique = true)
+    private String slug;
+
+    @Column(name = "rating_avg")
+    private BigDecimal ratingAvg;
+
+    @Column(name = "follower_count")
+    private Integer followerCount;
+
+    // ==========================================
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ShopImage> images;

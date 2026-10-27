@@ -2,10 +2,12 @@ package com.utetra.repository;
 
 import com.utetra.entity.Product;
 import com.utetra.enums.ProductStatus;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
@@ -35,4 +37,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
   @org.springframework.data.jpa.repository.Query("select p from Product p where p.id = :id")
   Optional<Product> lockById(Long id);
+
+  // Đếm số lượng món đang bán của 1 shop
+  long countByShopIdAndStatusAndIsDeletedFalse(Long shopId, ProductStatus status);
+
+  // ==========================================
+  // SỬA LẠI DÒNG NÀY:
+  // ==========================================
+  @EntityGraph(attributePaths = {"images", "attributes", "attributes.values"})
+  List<Product> findByShopIdAndStatusAndIsDeletedFalse(Long shopId, ProductStatus status);
 }

@@ -1,10 +1,17 @@
 package com.utetra.controller;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class CommercePageController {
+	@GetMapping("/test")
+	@ResponseBody
+	public String test() {
+	    return "<h1>Server đang chạy tốt! Không liên quan đến JSP.</h1>";
+	}
+
   @GetMapping("/customer/cart")
   public String page0() {
     return "customer/cart";

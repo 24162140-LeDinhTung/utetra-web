@@ -15,6 +15,7 @@ import java.util.List;
 public interface ShopRepository extends JpaRepository<Shop, Long> {
 
     List<Shop> findByOwnerIdAndIsDeletedFalse(Long ownerId);
+    List<Shop> findByStatusAndIsDeletedFalse(ShopStatus status);
     
     Page<Shop> findByIsDeletedFalse(Pageable pageable);
 

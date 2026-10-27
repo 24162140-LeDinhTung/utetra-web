@@ -6,9 +6,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Set; // Thay vì java.util.List
+import java.util.HashSet;
 
 @Entity
 @Table(name = "products")
+
 @Getter
 @Setter
 public class Product extends BaseEntity {
@@ -42,4 +46,13 @@ public class Product extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
     private ProductStatus status;
+    
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<ProductAttribute> attributes = new HashSet<>();
+
+    // ==========================================
+    // THÊM ĐOẠN NÀY ĐỂ LIÊN KẾT VỚI BẢNG ẢNH
+    // ==========================================
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ProductImage> images;
 }

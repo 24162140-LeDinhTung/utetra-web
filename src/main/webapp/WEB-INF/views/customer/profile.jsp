@@ -142,7 +142,7 @@
             });
         }
 
-        // --- TAB 2: YÊU THÍCH ---
+     // --- TAB 2: YÊU THÍCH ---
         function loadFavorites() {
             const list = document.getElementById('favorite-list');
             list.innerHTML = '<div class="spinner-border text-warning"></div>';
@@ -159,7 +159,8 @@
                                     <img src="${imgUrl}" style="height: 120px; object-fit: cover;">
                                     <div class="card-body p-2 text-center">
                                         <h6 class="text-truncate small fw-bold">${p.productName}</h6>
-                                        <a href="/products/${p.productId}" class="btn btn-sm btn-outline-warning w-100 mt-2">Xem</a>
+                                        <!-- THÊM CONTEXT PATH VÀO ĐÂY -->
+                                        <a href="${pageContext.request.contextPath}/products/${p.productId}" class="btn btn-sm btn-outline-warning w-100 mt-2">Xem</a>
                                     </div>
                                 </div>
                             </div>
@@ -188,7 +189,8 @@
                                     <img src="${imgUrl}" style="height: 120px; object-fit: cover;">
                                     <div class="card-body p-2 text-center">
                                         <h6 class="text-truncate small fw-bold">${p.productName}</h6>
-                                        <a href="/products/${p.productId}" class="btn btn-sm btn-outline-primary w-100 mt-2">Xem lại</a>
+                                        <!-- THÊM CONTEXT PATH VÀO ĐÂY -->
+                                        <a href="${pageContext.request.contextPath}/products/${p.productId}" class="btn btn-sm btn-outline-primary w-100 mt-2">Xem lại</a>
                                     </div>
                                 </div>
                             </div>
