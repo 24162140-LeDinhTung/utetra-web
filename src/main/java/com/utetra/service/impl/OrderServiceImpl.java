@@ -34,6 +34,7 @@ public class OrderServiceImpl implements OrderService {
   private final VoucherUsageRepository usages;
   private final CommerceAccess access;
   private final ProductPricing pricing;
+  private final PaymentAvailability paymentAvailability;
   private final ApplicationEventPublisher events;
 
   @Value("${commerce.shipping-fee:15000}")
@@ -53,6 +54,7 @@ public class OrderServiceImpl implements OrderService {
   }
 
   public OrderDetailResponse createOrder(Long userId, CreateOrderRequest r) {
+    paymentAvailability.requireAvailable(r.getPaymentMethod());
     User user =
         users
             .lockById(userId)
