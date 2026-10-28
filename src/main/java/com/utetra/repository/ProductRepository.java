@@ -26,6 +26,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
   @org.springframework.data.jpa.repository.Query(
       "select p from Product p where p.isDeleted = false and p.shop.isDeleted = false and"
+          + " p.shop.status = com.utetra.enums.ShopStatus.ACTIVE and"
           + " p.category.isDeleted = false and p.status = com.utetra.enums.ProductStatus.ACTIVE and"
           + " (:shopId is null or p.shop.id = :shopId) and (:categoryId is null or p.category.id ="
           + " :categoryId) and (:keyword is null or lower(p.name) like lower(concat('%', :keyword,"
@@ -39,11 +40,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   Optional<Product> lockById(Long id);
 
   // Đếm số lượng món đang bán của 1 shop
+  @org.springframework.data.jpa.repository.Query("select count(p) from Product p where p.shop.id = :shopId and p.status = :status and p.isDeleted = false and p.category.isDeleted = false and p.shop.isDeleted = false and p.shop.status = com.utetra.enums.ShopStatus.ACTIVE")
   long countByShopIdAndStatusAndIsDeletedFalse(Long shopId, ProductStatus status);
 
   // ==========================================
   // SỬA LẠI DÒNG NÀY:
   // ==========================================
   @EntityGraph(attributePaths = {"images", "attributes", "attributes.values"})
+  @org.springframework.data.jpa.repository.Query("select distinct p from Product p where p.shop.id = :shopId and p.status = :status and p.isDeleted = false and p.category.isDeleted = false and p.shop.isDeleted = false and p.shop.status = com.utetra.enums.ShopStatus.ACTIVE order by p.soldCount desc, p.id")
   List<Product> findByShopIdAndStatusAndIsDeletedFalse(Long shopId, ProductStatus status);
 }

@@ -29,7 +29,12 @@
     const raw = await response.text(); let data;
     try {data = raw ? JSON.parse(raw) : null;} catch {data = null;}
     if (!response.ok) {
-      if (response.status === 401) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken'); localStorage.removeItem('userRoles');
+        document.cookie='accessToken=; Max-Age=0; path=/; SameSite=Lax';
+        location.assign(url('/auth/login'));
+        throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      }
       if (response.status === 403) throw new Error('Tài khoản không có quyền thực hiện thao tác này. Hãy kiểm tra tài khoản/đăng nhập.');
       const details = data?.data && typeof data.data==='object' ? Object.values(data.data).join('; ') : '';
       throw new Error(data?.message ? data.message + (details ? ': '+details : '') : 'Không tải được dữ liệu ('+response.status+').');
@@ -110,6 +115,8 @@
   async function checkout() {
     const shopId=Number(query.get('shopId'));const carts=await api('/api/customer/cart');const c=carts.find(x=>x.shopId===shopId);if(!c)throw new Error('Chọn cửa hàng trong giỏ trước khi thanh toán.');
     content.innerHTML=`<h1>Đặt hàng · ${esc(c.shopName)}</h1>${table(['Món','Số lượng','Thành tiền'],c.items.map(i=>`<tr><td>${esc(i.productName)}<br>${esc(i.selectedAttributes)}</td><td>${i.quantity}</td><td>${money(i.lineTotal)}</td></tr>`))}<form id="checkout" class="ute-form ute-panel"><label>Địa chỉ nhận hàng<textarea name="shippingAddress" required maxlength="2000" placeholder="Tên người nhận, số điện thoại, số nhà, đường, phường/xã…"></textarea></label>${field('voucherCode','Mã giảm giá (nếu có)')}${select('paymentMethod','Phương thức thanh toán',[['COD','Tiền mặt khi nhận hàng'],['VNPAY','VNPay'],['MOMO','MoMo']])}<div class="ute-actions">${action('quote','Tính lại tổng tiền','btn btn-outline-success')}${action('place','Xác nhận đặt hàng','btn btn-success','submit')}</div><div id="quote-result"></div></form>`;
+    const methods=await api('/api/payment/methods');
+    for(const option of $('[name=paymentMethod]').options){const method=methods.find(m=>m.code===option.value);option.disabled=!method?.available;if(option.disabled)option.textContent+=' — chưa cấu hình';}
     let currentQuote='';let confirmedTotal=null;const request=()=>({...formData($('#checkout')),shopId});
     async function quote(){if(!$('#checkout').reportValidity())return;const body=request();const q=await api('/api/customer/orders/quote',{method:'POST',body});$('#quote-result').innerHTML=totals(q);currentQuote=JSON.stringify(body);confirmedTotal=q.totalAmount;$('#place').disabled=false;}
     $('#place').disabled=true;$('#checkout').addEventListener('input',()=>{$('#place').disabled=true;currentQuote='';});$('#checkout').addEventListener('change',()=>{$('#place').disabled=true;currentQuote='';});

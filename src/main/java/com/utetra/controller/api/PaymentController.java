@@ -16,6 +16,12 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class PaymentController {
   private final PaymentService payments;
+  private final com.utetra.service.PaymentAvailability availability;
+
+  @GetMapping("/methods")
+  public java.util.List<com.utetra.service.PaymentAvailability.Method> methods() {
+    return availability.methods();
+  }
 
   public record PaymentRequest(@NotNull Long orderId) {}
 

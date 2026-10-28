@@ -76,7 +76,10 @@ public class ReviewServiceImpl implements ReviewService {
   @Transactional(readOnly = true)
   public Page<ReviewResponse> list(Long product, Pageable page) {
     Product p = access.product(product);
-    if (p.getStatus() != ProductStatus.ACTIVE)
+    if (p.getStatus() != ProductStatus.ACTIVE
+        || p.getShop().getStatus() != ShopStatus.ACTIVE
+        || Boolean.TRUE.equals(p.getShop().getIsDeleted())
+        || Boolean.TRUE.equals(p.getCategory().getIsDeleted()))
       throw new ResourceNotFoundException("Sản phẩm chưa mở bán");
     return reviews.findByProductIdAndIsDeletedFalse(product, page).map(this::dto);
   }

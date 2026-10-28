@@ -37,21 +37,21 @@
                     </p>
                     <p class="text-muted small mb-2">Đã bán: ${product.soldCount} · Còn: ${product.stock}</p>
                     
-                    <!-- HIỂN THỊ DROPDOWN CHỌN SIZE -->
-                    <c:set var="hasSize" value="false" />
+                    <!-- Mỗi thuộc tính còn hoạt động đều cần được chọn trước khi thêm giỏ. -->
                     <c:forEach items="${product.attributes}" var="attr">
-                        <c:if test="${attr.name eq 'Size'}">
-                            <c:set var="hasSize" value="true" />
+                        <c:if test="${not attr.isDeleted}">
                             <div class="mb-2">
-                                <label class="form-label small fw-bold mb-1">Chọn Size:</label>
-                                <select class="form-select form-select-sm size-selector" id="size-${product.id}">
+                                <label class="form-label small fw-bold mb-1" for="attr-${product.id}-${attr.id}">Chọn <c:out value="${attr.name}"/>:</label>
+                                <select class="form-select form-select-sm product-option" id="attr-${product.id}-${attr.id}" data-product-id="${product.id}" data-attribute="<c:out value='${attr.name}'/>">
                                     <c:forEach items="${attr.values}" var="val">
-                                        <option value="${val.value}">
-                                            ${val.value} 
+                                      <c:if test="${not val.isDeleted}">
+                                        <option value="<c:out value='${val.value}'/>">
+                                            <c:out value="${val.value}"/>
                                             <c:if test="${val.extraPrice > 0}">
                                                 (+<fmt:formatNumber value="${val.extraPrice}" type="currency" currencySymbol="₫"/>)
                                             </c:if>
                                         </option>
+                                      </c:if>
                                     </c:forEach>
                                 </select>
                             </div>
@@ -62,7 +62,7 @@
                 <div class="card-footer bg-white border-top-0">
                     <!-- Nút thêm vào giỏ hàng (Truyền thêm biến hasSize) -->
                     <button class="btn btn-warning btn-sm w-100 fw-bold text-dark" 
-                            onclick="addToCart(${product.id}, ${hasSize}, this)">
+                            onclick="addToCart(${product.id}, this)">
                         <i class="bi bi-cart-plus"></i> Thêm vào giỏ
                     </button>
                 </div>
@@ -73,27 +73,23 @@
 
 <!-- ĐOẠN JAVASCRIPT XỬ LÝ GỌI API GIỎ HÀNG -->
 <script>
-    function addToCart(productId, hasSize, buttonElement) {
+    function addToCart(productId, buttonElement) {
         // Đổi trạng thái nút để tránh click nhiều lần
         const originalText = buttonElement.innerHTML;
         buttonElement.innerHTML = 'Đang thêm...';
         buttonElement.disabled = true;
 
         // 1. Xây dựng object thuộc tính dựa trên lựa chọn của người dùng
-        let attributesData = {};
-        
-        if (hasSize) {
-            const sizeSelect = document.getElementById('size-' + productId);
-            if (sizeSelect) {
-                attributesData["Size"] = sizeSelect.value;
-            }
-        }
+        const attributesData = Object.create(null);
+        document.querySelectorAll('.product-option[data-product-id="' + productId + '"]').forEach(select => {
+            attributesData[select.dataset.attribute] = select.value;
+        });
 
         // Đóng gói thành chuỗi JSON (ví dụ: {"Size":"L"})
         const selectedAttributesJson = JSON.stringify(attributesData);
 
         // 2. Gửi API
-        fetch('/api/customer/cart/items', {
+        fetch('${pageContext.request.contextPath}/api/customer/cart/items', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -108,7 +104,7 @@
             // Xử lý lỗi xác thực
             if (response.status === 401 || response.status === 403) {
                 alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!');
-                window.location.href = '/auth/login';
+                window.location.href = '${pageContext.request.contextPath}/auth/login';
                 return;
             }
             

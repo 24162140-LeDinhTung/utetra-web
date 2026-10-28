@@ -48,12 +48,13 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            
+
             // XỬ LÝ CHUYỂN HƯỚNG KHI LỖI
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     // Chưa đăng nhập -> Về trang Login
-                    if (request.getRequestURI().startsWith("/vendor") || request.getRequestURI().startsWith("/admin")) {
+                    String path = request.getServletPath();
+                    if (path.startsWith("/vendor/") || path.startsWith("/admin/") || path.startsWith("/customer/")) {
                         response.sendRedirect(request.getContextPath() + "/auth/login");
                     } else {
                         response.sendError(401, "Unauthorized");
@@ -61,15 +62,19 @@ public class SecurityConfig {
                 })
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
                     // Đã đăng nhập nhưng không đủ quyền (Customer vào Vendor/Admin) -> Chuyển sang trang báo lỗi 403
-                    response.sendRedirect(request.getContextPath() + "/error/403");
+                    if (request.getServletPath().startsWith("/api/")) {
+                        response.sendError(403, "Forbidden");
+                    } else {
+                        response.sendRedirect(request.getContextPath() + "/error/403");
+                    }
                 })
             )
 
             .authorizeHttpRequests(auth -> auth
-                
+
                 // 1. CÁC TRANG CÔNG KHAI & TÀI NGUYÊN TĨNH
                 .requestMatchers(
-                    "/", 
+                    "/",
                     "/WEB-INF/**",
                     "/uploads/**",
                     "/test",
@@ -90,7 +95,7 @@ public class SecurityConfig {
                     "/api/shops/**",
                     "/api/categories/**",
                     "/api/users/*/public",
-                    "/api/payment/vnpay/ipn", 
+                    "/api/payment/vnpay/ipn",
                     "/api/payment/momo/ipn"
                 ).permitAll()
 
