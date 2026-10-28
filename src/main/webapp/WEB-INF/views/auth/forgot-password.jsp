@@ -7,7 +7,7 @@
     <title>Quên mật khẩu - UTEtra</title>
     <style>
         * { box-sizing: border-box; }
-        
+
         /* ĐÂY LÀ CLASS QUAN TRỌNG ĐỂ ĐÈ LÊN DECORATOR */
         .auth-wrapper {
             position: fixed;

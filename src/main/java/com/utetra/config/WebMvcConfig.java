@@ -12,7 +12,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    @Value("${app.upload.dir:/app/uploads}")
+    @Value("${app.upload.dir:./uploads}")
     private String uploadDir;
 
     @Value("${app.upload.url-prefix:/uploads}")
@@ -20,7 +20,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String location = "file:" + uploadDir + "/";
+        String location = java.nio.file.Paths.get(uploadDir).toAbsolutePath().normalize().toUri().toString();
+        if (!location.endsWith("/")) location += "/";
         registry.addResourceHandler(urlPrefix + "/**")
                 .addResourceLocations(location);
 

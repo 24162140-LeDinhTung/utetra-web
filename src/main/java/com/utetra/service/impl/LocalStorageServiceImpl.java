@@ -18,7 +18,7 @@ import java.util.UUID;
 @Slf4j
 public class LocalStorageServiceImpl implements StorageService {
 
-    @Value("${app.upload.dir:/app/uploads}")
+    @Value("${app.upload.dir:./uploads}")
     private String uploadDir;
 
     @Value("${app.upload.url-prefix:/uploads}")
@@ -51,6 +51,9 @@ public class LocalStorageServiceImpl implements StorageService {
                 ext = originalName.substring(originalName.lastIndexOf('.')).toLowerCase();
             }
 
+            if (!java.util.Set.of(".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm").contains(ext))
+                throw new IllegalArgumentException("Chỉ nhận ảnh JPG/PNG/GIF/WebP hoặc video MP4/WebM");
+
             // Sanitize folder: chỉ cho phép chữ, số, "/", "_", "-"
             String safeFolder = (folder == null)
                     ? ""
@@ -76,7 +79,9 @@ public class LocalStorageServiceImpl implements StorageService {
                 throw new RuntimeException("Đường dẫn không hợp lệ");
             }
 
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            try (var input = file.getInputStream()) {
+                Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
+            }
 
             log.info("Đã lưu file: {} -> {}", originalName, target);
 
@@ -92,7 +97,7 @@ public class LocalStorageServiceImpl implements StorageService {
 
     @Override
     public void deleteFile(String fileUrl) {
-        if (fileUrl == null || fileUrl.isBlank() || !fileUrl.startsWith(urlPrefix)) {
+        if (fileUrl == null || fileUrl.isBlank() || !fileUrl.startsWith(urlPrefix + "/")) {
             return;
         }
         try {

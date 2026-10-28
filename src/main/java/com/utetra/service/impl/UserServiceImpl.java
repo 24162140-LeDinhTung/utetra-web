@@ -32,10 +32,10 @@ public class UserServiceImpl implements UserService {
     public UserResponse updateProfile(Long userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
-        
+
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
-        
+
         return mapToResponse(userRepository.save(user));
     }
 
@@ -56,7 +56,7 @@ public class UserServiceImpl implements UserService {
         String url = storageService.uploadFile(file, "utetra/avatars");
         user.setAvatarUrl(url);
         userRepository.save(user);
-        
+
         return url;
     }
 

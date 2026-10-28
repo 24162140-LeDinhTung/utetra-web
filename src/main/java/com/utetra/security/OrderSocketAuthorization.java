@@ -51,8 +51,12 @@ public class OrderSocketAuthorization implements ChannelInterceptor {
       String destination = h.getDestination() == null ? "" : h.getDestination();
       Matcher order = Pattern.compile("/topic/order/(\\d+)/status").matcher(destination);
       Matcher shop = Pattern.compile("/topic/shop/(\\d+)/orders").matcher(destination);
+      Matcher offers = Pattern.compile("/topic/shop/(\\d+)/offers").matcher(destination);
       boolean allowed = false;
-      if (order.matches()) {
+      if (offers.matches()) {
+        allowed = shops.findById(Long.valueOf(offers.group(1)))
+            .filter(s -> !Boolean.TRUE.equals(s.getIsDeleted())).isPresent();
+      } else if (order.matches()) {
         Order o =
             orders
                 .findById(Long.valueOf(order.group(1)))

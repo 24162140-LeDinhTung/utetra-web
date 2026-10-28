@@ -13,7 +13,7 @@
                         <h2 class="text-warning fw-bold mb-2">☕ UTETra</h2>
                         <p class="text-muted">Đăng nhập để đặt món ngay</p>
                     </div>
-                    
+
                     <form id="loginForm">
                         <div class="mb-3">
                             <label class="form-label fw-bold">Email</label>
@@ -23,7 +23,7 @@
                             <label class="form-label fw-bold">Mật khẩu</label>
                             <input type="password" id="password" class="form-control form-control-lg bg-light" placeholder="Nhập mật khẩu" required>
                         </div>
-                        
+
                         <button type="button" onclick="login()" class="btn btn-warning btn-lg w-100 fw-bold text-dark mb-3">
                             Đăng nhập
                         </button>
@@ -56,8 +56,8 @@
 
             fetch('/api/auth/login', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json' 
+                headers: {
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ email: email, password: password })
             })
@@ -67,10 +67,10 @@
                     // Lưu token vào localStorage
                     localStorage.setItem('accessToken', data.data.accessToken);
                     document.cookie = "accessToken=" + data.data.accessToken + "; path=/";
-					localStorage.setItem('userRoles', JSON.stringify(data.data.roles)); 
-                    
+					localStorage.setItem('userRoles', JSON.stringify(data.data.roles));
+
                     alert('Đăng nhập thành công!');
-                    
+
                     // Chuyển hướng dựa vào Role (nếu cần)
                     if (data.data.roles.includes("ROLE_ADMIN")) {
                         window.location.href = '/admin/categories';

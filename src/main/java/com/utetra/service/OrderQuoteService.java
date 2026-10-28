@@ -31,6 +31,28 @@ public class OrderQuoteService {
       BigDecimal shippingFee,
       BigDecimal totalAmount) {}
 
+
+  public record Offer(String code, String type, String discountType, BigDecimal value,
+      BigDecimal minimum, BigDecimal maximum, java.time.LocalDateTime endsAt, boolean eligible) {}
+
+  public java.util.List<Offer> offers(Long user, Long shop) {
+    var now = LocalDateTime.now();
+    return vouchers.findByShopIdAndIsDeletedFalseOrderByIdDesc(shop).stream()
+        .filter(v -> !now.isBefore(v.getStartDate()) && now.isBefore(v.getEndDate()))
+        .filter(v -> v.getUsageLimit() == null || v.getUsedCount() < v.getUsageLimit())
+        .filter(v -> usages.countByVoucherIdAndUserId(v.getId(), user) == 0)
+        .map(v -> {
+          var request = new CreateOrderRequest();
+          request.setShopId(shop); request.setPaymentMethod(com.utetra.enums.PaymentMethod.COD);
+          request.setVoucherCode(v.getCode());
+          boolean eligible;
+          try { quote(user, request); eligible = true; }
+          catch (IllegalArgumentException e) { eligible = false; }
+          return new Offer(v.getCode(), v.getVoucherType().name(), v.getDiscountType().name(),
+              v.getDiscountValue(), v.getMinOrderAmount(), v.getMaxDiscountAmount(), v.getEndDate(), eligible);
+        }).toList();
+  }
+
   public Quote quote(Long user, CreateOrderRequest r) {
     paymentAvailability.requireAvailable(r.getPaymentMethod());
     CartResponse c =

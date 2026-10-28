@@ -1,3 +1,7 @@
+> Cập nhật theo yêu cầu mới: đã tích hợp cộng ví COD khi giao và online khi callback thành công; xem [luồng cộng ví](ORDER_WALLET_SETTLEMENT_2026-10-29.md). Ghi chú chưa tích hợp cộng ví trong báo cáo cũ bên dưới đã được thay thế.
+
+> Cập nhật 29/10/2026: xem [báo cáo ghép nhánh và sửa yêu cầu mới](MERGE_PART_B_2026-10-29.md).
+
 # Bàn giao phần B — UTETra
 
 > Ngày 28/10/2026: đã ghép dev `cb6587d`, giữ thay đổi nhóm và B, kiểm tra lại **26/26 test Java + 2/2 JavaScript thành công**. Chi tiết ở mục đầu PART_B_COMPLETION_2026-10-27.md. Chưa commit/push các chỉnh sửa.

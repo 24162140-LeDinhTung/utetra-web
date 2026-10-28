@@ -7,7 +7,7 @@
     <title>Đặt lại mật khẩu - UTEtra</title>
     <style>
         * { box-sizing: border-box; }
-        
+
         /* LỚP PHỦ TOÀN MÀN HÌNH ĐỂ ĐÈ LÊN DECORATOR */
         .auth-wrapper {
             position: fixed;

@@ -33,25 +33,23 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     public Wallet getWalletByShop(Long shopId) {
-        // Tìm ví theo shopId. Nếu Repo chưa có hàm này, bạn cần thêm vào WalletRepository:
-        // Wallet findByShopId(Long shopId);
-        return walletRepository.findAll().stream()
-                .filter(w -> w.getShop().getId().equals(shopId))
-                .findFirst()
+        return walletRepository.findByShopId(shopId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ví của shop"));
     }
 
     @Override
     @Transactional
     public void addMoney(Long shopId, BigDecimal amount, String description) {
-        Wallet wallet = getWalletByShop(shopId);
+        if (amount == null || amount.signum() <= 0) throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        Wallet wallet = walletRepository.lockByShopId(shopId).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ví"));
         wallet.setBalance(wallet.getBalance().add(amount));
         walletRepository.save(wallet);
 
         WalletTransaction tx = new WalletTransaction();
         tx.setWallet(wallet);
         tx.setAmount(amount);
-        tx.setType(WalletTxType.ORDER_INCOME); // Hoặc truyền Type vào hàm
+        tx.setBalanceAfter(wallet.getBalance()); // <-- ĐÃ THÊM DÒNG NÀY
+        tx.setType(WalletTxType.ORDER_INCOME);
         tx.setDescription(description);
         transactionRepository.save(tx);
     }
@@ -59,7 +57,8 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public void deductMoney(Long shopId, BigDecimal amount, String description) {
-        Wallet wallet = getWalletByShop(shopId);
+        if (amount == null || amount.signum() <= 0) throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        Wallet wallet = walletRepository.lockByShopId(shopId).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ví"));
         if (wallet.getBalance().compareTo(amount) < 0) {
             throw new RuntimeException("Số dư trong ví không đủ");
         }
@@ -69,6 +68,7 @@ public class WalletServiceImpl implements WalletService {
         WalletTransaction tx = new WalletTransaction();
         tx.setWallet(wallet);
         tx.setAmount(amount.negate());
+        tx.setBalanceAfter(wallet.getBalance()); // <-- ĐÃ THÊM DÒNG NÀY
         tx.setType(WalletTxType.WITHDRAW);
         tx.setDescription(description);
         transactionRepository.save(tx);
@@ -76,6 +76,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     public List<WalletTransaction> getTransactionHistory(Long walletId) {
-        return transactionRepository.findAll(); // Bạn cần thêm hàm findByWalletId vào Repo
+        return transactionRepository.findByWalletId(walletId);
     }
 }
