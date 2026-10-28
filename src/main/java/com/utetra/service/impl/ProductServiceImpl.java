@@ -82,6 +82,7 @@ public class ProductServiceImpl implements ProductService {
     Product p = access.product(id);
     if (p.getStatus() != ProductStatus.ACTIVE
         || Boolean.TRUE.equals(p.getShop().getIsDeleted())
+        || p.getShop().getStatus() != com.utetra.enums.ShopStatus.ACTIVE
         || Boolean.TRUE.equals(p.getCategory().getIsDeleted()))
       throw new ResourceNotFoundException("Sản phẩm chưa được mở bán");
     if (viewerId != null) {
@@ -138,7 +139,7 @@ public class ProductServiceImpl implements ProductService {
 
   public Page<ShopProductsResponse> getHomeShops(Pageable page) {
     return shops
-        .findByIsDeletedFalse(page)
+        .findByStatusAndIsDeletedFalse(com.utetra.enums.ShopStatus.ACTIVE, page)
         .map(
             s -> {
               Page<Product> p =

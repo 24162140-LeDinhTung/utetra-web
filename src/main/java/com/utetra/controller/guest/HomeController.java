@@ -62,10 +62,9 @@ public class HomeController {
     @Transactional(readOnly = true) 
     @GetMapping("/shops/{id}")
     public String shopDetail(@PathVariable Long id, Model model) {
-        Shop shop = shopService.getShopById(id);
-        if (shop == null) {
-            return "redirect:/";
-        }
+        Shop shop = shopRepository.findById(id)
+            .filter(s -> s.getStatus() == ShopStatus.ACTIVE && !Boolean.TRUE.equals(s.getIsDeleted()))
+            .orElseThrow(() -> new com.utetra.exception.custom.ResourceNotFoundException("Không tìm thấy cửa hàng đang hoạt động"));
         List<Product> products = productRepository.findByShopIdAndStatusAndIsDeletedFalse(id, ProductStatus.ACTIVE);
         model.addAttribute("shop", shop);
         model.addAttribute("products", products);

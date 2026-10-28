@@ -20,6 +20,7 @@ public class OrderQuoteService {
   private final CartService carts;
   private final VoucherRepository vouchers;
   private final VoucherUsageRepository usages;
+  private final PaymentAvailability paymentAvailability;
 
   @Value("${commerce.shipping-fee:15000}")
   private BigDecimal shippingFee;
@@ -31,6 +32,7 @@ public class OrderQuoteService {
       BigDecimal totalAmount) {}
 
   public Quote quote(Long user, CreateOrderRequest r) {
+    paymentAvailability.requireAvailable(r.getPaymentMethod());
     CartResponse c =
         carts.getCart(user).stream()
             .filter(x -> x.getShopId().equals(r.getShopId()))

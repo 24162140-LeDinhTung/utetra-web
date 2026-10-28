@@ -6,7 +6,7 @@ spring:
     active: dev
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:utetra_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=utf8
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:utetra_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=utf8&connectTimeout=10000&socketTimeout=10000
     username: ${DB_USER:utetra}
     password: ${DB_PASSWORD:utetra123}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -44,6 +44,9 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 100MB
+    encoding:
+      charset: UTF-8
+      force: true
 
   mvc:
     view:
@@ -52,7 +55,7 @@ spring:
 
 server:
   port: 8080
- 
+
 jwt:
   secret: utetra-super-secret-key-change-in-production-minimum-256-bits-for-hs256-algorithm
   access-expire-minutes: 15

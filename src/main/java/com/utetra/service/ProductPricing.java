@@ -14,7 +14,8 @@ import tools.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+// Cart rendering catches validation failures to show an unavailable item instead of failing the page.
+@Transactional(readOnly = true, noRollbackFor = IllegalArgumentException.class)
 public class ProductPricing {
   private final ProductAttributeRepository attributes;
   private final ProductAttributeValueRepository values;
@@ -89,6 +90,7 @@ public class ProductPricing {
   public void purchasable(Product p) {
     if (Boolean.TRUE.equals(p.getIsDeleted())
         || Boolean.TRUE.equals(p.getShop().getIsDeleted())
+        || p.getShop().getStatus() != ShopStatus.ACTIVE
         || Boolean.TRUE.equals(p.getCategory().getIsDeleted())
         || p.getStatus() != ProductStatus.ACTIVE)
       throw new IllegalArgumentException("Sản phẩm không còn được mở bán: " + p.getName());

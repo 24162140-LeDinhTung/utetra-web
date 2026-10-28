@@ -53,6 +53,9 @@ class CommerceIntegrationTests {
   @Autowired PlatformTransactionManager txManager;
   @Autowired EntityManager em;
   @Autowired JwtProvider jwt;
+  @Autowired org.springframework.core.env.ConfigurableEnvironment environment;
+  @Autowired PaymentAvailability availability;
+  @Autowired OrderQuoteService quotes;
   @LocalServerPort int port;
   User customer, other, owner;
   Shop shop, shop2;
@@ -95,6 +98,7 @@ class CommerceIntegrationTests {
     Shop s = new Shop();
     s.setOwner(owner);
     s.setName(name);
+    s.setStatus(ShopStatus.ACTIVE);
     return shops.save(s);
   }
 
@@ -449,6 +453,8 @@ class CommerceIntegrationTests {
 
   @Test
   void jspPagesAndStaticClientAreServed() throws Exception {
+    User admin = user(RoleName.ROLE_ADMIN);
+    String adminToken = jwt.generateAccessToken(admin.getId(), admin.getEmail());
     for (String path :
         List.of(
             "/",
@@ -458,11 +464,93 @@ class CommerceIntegrationTests {
             "/customer/checkout",
             "/vendor/products",
             "/admin/categories")) {
-      var response = get(path, null);
+      var response = get(path, path.startsWith("/customer/") || path.startsWith("/vendor/")
+          || path.startsWith("/admin/") ? adminToken : null);
       assertThat(response.statusCode()).as(path + " " + response.body()).isEqualTo(200);
-      assertThat(response.body()).contains("id=\"commerce\"");
+      assertThat(response.body()).contains(path.equals("/") ? "Xem Menu Cửa Hàng" : "id=\"commerce\"");
     }
     assertThat(get("/js/commerce.js", null).statusCode()).isEqualTo(200);
+  }
+
+  @Test
+  void mergedShopPageUsesActiveCatalogAndRejectsClosedShop() throws Exception {
+    options();
+    var response = get("/shops/" + shop.getId(), null);
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body()).contains(product.getName(), "Size");
+    category.setIsDeleted(true);
+    categories.save(category);
+    assertThat(get("/shops/" + shop.getId(), null).body()).doesNotContain(product.getName());
+    assertThat(products.countByShopIdAndStatusAndIsDeletedFalse(shop.getId(), ProductStatus.ACTIVE)).isZero();
+    shop.setStatus(ShopStatus.CLOSED);
+    shops.save(shop);
+    assertThat(get("/shops/" + shop.getId(), null).statusCode()).isEqualTo(404);
+  }
+
+  @Test
+  void inactiveShopsCannotSellAndExistingCartIsPreserved() {
+    add(customer, product, 1, "{}");
+    for (ShopStatus status : List.of(ShopStatus.PENDING, ShopStatus.BANNED, ShopStatus.CLOSED)) {
+      shop.setStatus(status);
+      shops.save(shop);
+      ProductSearchRequest search = new ProductSearchRequest();
+      search.setShopId(shop.getId());
+      assertThat(productService.search(search).getItems()).isEmpty();
+      assertThat(productService.getHomeShops(PageRequest.of(0, 100)).getContent())
+          .noneMatch(s -> s.shopId().equals(shop.getId()));
+      assertThatThrownBy(() -> productService.getDetail(product.getId(), null))
+          .isInstanceOf(com.utetra.exception.custom.ResourceNotFoundException.class);
+      assertThatThrownBy(() -> add(other, product, 1, "{}"))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> orders.createOrder(customer.getId(), request(shop, PaymentMethod.COD)))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThat(carts.getCart(customer.getId()).getFirst().getItems().getFirst().getUnavailableReason())
+          .isNotBlank();
+      assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(20);
+    }
+    shop.setStatus(ShopStatus.ACTIVE);
+    shops.save(shop);
+    assertThat(orders.createOrder(customer.getId(), request(shop, PaymentMethod.COD)).getStatus())
+        .isEqualTo(OrderStatus.CONFIRMED.name());
+  }
+
+  @Test
+  void browserCookieAuthenticatesProfileAndExpiredSessionRedirects() throws Exception {
+    var anonymous = get("/customer/profile", null);
+    assertThat(anonymous.statusCode()).isEqualTo(302);
+    assertThat(anonymous.headers().firstValue("location").orElseThrow()).endsWith("/auth/login");
+    String token = jwt.generateAccessToken(customer.getId(), customer.getEmail());
+    var req = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/customer/profile"))
+        .header("Cookie", "accessToken=" + token).build();
+    assertThat(HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString()).statusCode())
+        .isEqualTo(200);
+    assertThat(get("/api/customer/profile", null).statusCode()).isEqualTo(401);
+    assertThat(get("/api/admin/categories", token).statusCode()).isEqualTo(403);
+    assertThat(get("/api/payment/methods", token).body()).contains("COD", "VNPAY", "MOMO")
+        .doesNotContain("test-vnpay-secret", "test-momo-secret");
+  }
+
+  @Test
+  void missingGatewayConfigurationCannotReserveStockOrConsumeCart() {
+    add(customer, product, 1, "{}");
+    environment.getPropertySources().addFirst(new org.springframework.core.env.MapPropertySource(
+        "missing-payment-test", Map.of("payment.vnpay.hash-secret", "", "payment.momo.secret-key", "")));
+    try {
+      for (PaymentMethod method : List.of(PaymentMethod.VNPAY, PaymentMethod.MOMO)) {
+        assertThat(availability.available(method)).isFalse();
+        assertThatThrownBy(() -> quotes.quote(customer.getId(), request(shop, method)))
+            .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> orders.createOrder(customer.getId(), request(shop, method)))
+            .isInstanceOf(IllegalStateException.class);
+      }
+      assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(20);
+      assertThat(carts.getCart(customer.getId()).getFirst().getItems()).hasSize(1);
+      assertThat(orders.getByUser(customer.getId(), null, PageRequest.of(0, 10)).getContent()).isEmpty();
+      assertThat(orders.createOrder(customer.getId(), request(shop, PaymentMethod.COD)).getStatus())
+          .isEqualTo("CONFIRMED");
+    } finally {
+      environment.getPropertySources().remove("missing-payment-test");
+    }
   }
 
   @Autowired com.utetra.security.OrderSocketAuthorization socketAuthorization;

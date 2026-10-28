@@ -1,5 +1,13 @@
 # Bàn giao phần B — UTETra
 
+> Ngày 28/10/2026: đã ghép dev `cb6587d`, giữ thay đổi nhóm và B, kiểm tra lại **26/26 test Java + 2/2 JavaScript thành công**. Chi tiết ở mục đầu PART_B_COMPLETION_2026-10-27.md. Chưa commit/push các chỉnh sửa.
+
+> Cập nhật kiểm tra ngày 27/10/2026: xem [PART_B_COMPLETION_2026-10-27.md](PART_B_COMPLETION_2026-10-27.md).
+> Bản hiện tại đã chạy lại toàn bộ 25 test Java thành công và 2 test JavaScript thành công.
+> Các đoạn “chưa chạy lại”, “chưa có status” và kết quả 19/20 bên dưới là lịch sử ngày 23/10, không phải trạng thái hiện tại.
+> Shop hiện phải ACTIVE để xuất hiện ở catalog hoặc nhận đơn mới. API mới `GET /api/payment/methods` báo phương thức đã có cấu hình; không trả secret.
+> Kiểm thử này dùng H2 và callback mô phỏng, chưa xác nhận giao dịch thật với VNPay/MoMo hay upload Cloudinary.
+
 Cập nhật: 23/10/2026. Mã nguồn đã được chỉnh trực tiếp tại `D:\Year-3\Lap-trinh-web\SpringToolForEclipse-Workspace\utetra-web`.
 
 ## Phạm vi đã bổ sung
