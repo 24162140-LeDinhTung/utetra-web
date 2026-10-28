@@ -158,13 +158,6 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Cloudinary -->
-		<dependency>
-			<groupId>com.cloudinary</groupId>
-			<artifactId>cloudinary-http45</artifactId>
-			<version>1.39.0</version>
-		</dependency>
-
 		<!-- MapStruct -->
 		<dependency>
 			<groupId>org.mapstruct</groupId>

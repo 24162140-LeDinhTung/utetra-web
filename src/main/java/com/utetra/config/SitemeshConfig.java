@@ -12,24 +12,15 @@ public class SitemeshConfig {
 
   @Bean
   public FilterRegistrationBean<ConfigurableSiteMeshFilter> siteMeshFilter() {
-    FilterRegistrationBean<ConfigurableSiteMeshFilter> filter = new FilterRegistrationBean<>();
+    FilterRegistrationBean<ConfigurableSiteMeshFilter> bean = new FilterRegistrationBean<>();
 
-    filter.setFilter(
+    bean.setFilter(
         new ConfigurableSiteMeshFilter() {
           @Override
           protected void applyCustomConfiguration(SiteMeshFilterBuilder builder) {
             builder
-                // 1. Cấu hình riêng cho Vendor và Admin (Phải đặt lên đầu)
-                .addDecoratorPath("/vendor/*", "vendor-decorator.jsp")
-                .addDecoratorPath("/admin/*", "admin-decorator.jsp")
-                
-                // 2. Cấu hình cho Auth (Đăng nhập/Đăng ký)
-                .addDecoratorPath("/auth/*", "auth-decorator.jsp")
-                
-                // 3. Cấu hình mặc định cho Khách/Customer (Phải đặt ở dưới cùng)
-                .addDecoratorPath("/*", "main-decorator.jsp")
-                
-                // 4. Loại trừ các đường dẫn không cần giao diện
+
+                // Các path API/static cũ giữ nguyên
                 .addExcludedPath("/api/*")
                 .addExcludedPath("/ws/*")
                 .addExcludedPath("/ws-native")
@@ -38,12 +29,20 @@ public class SitemeshConfig {
                 .addExcludedPath("/css/**")
                 .addExcludedPath("/js/**")
                 .addExcludedPath("/images/**")
-                .addExcludedPath("/error");
+                .addExcludedPath("/error")
+                .addExcludedPath("/favicon.ico")   // ⬅️ bonus: hết lỗi NoResourceFoundException
+
+                // ============ 2. GÁN DECORATOR — thứ tự cụ thể → chung ============
+                // Rule cụ thể phải đặt trước rule /* để được ưu tiên
+                .addDecoratorPath("/vendor/*", "vendor-decorator.jsp")
+                .addDecoratorPath("/admin/*", "admin-decorator.jsp")
+                .addDecoratorPath("/auth/*", "auth-decorator.jsp")
+                .addDecoratorPath("/*", "main-decorator.jsp");
           }
         });
 
-    filter.addUrlPatterns("/*");
-    filter.setOrder(Ordered.HIGHEST_PRECEDENCE);
-    return filter;
+    bean.addUrlPatterns("/*");
+    bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    return bean;
   }
 }

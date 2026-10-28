@@ -44,8 +44,10 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 100MB
+    # Cấu hình UTF-8 được chuyển sang đây theo chuẩn Spring Boot mới
     encoding:
       charset: UTF-8
+      enabled: true
       force: true
 
   mvc:
@@ -61,10 +63,11 @@ jwt:
   access-expire-minutes: 15
   refresh-expire-days: 7
 
-cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:your-cloud-name}
-  api-key: ${CLOUDINARY_API_KEY:your-api-key}
-  api-secret: ${CLOUDINARY_API_SECRET:your-api-secret}
+# ================== UPLOAD (LOCAL STORAGE) ==================
+app:
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
+    url-prefix: /uploads
 
 logging:
   level:

@@ -106,3 +106,6 @@ coverage/
 *.bak
 *.swp
 *~
+
+# Upload folder (local dev)
+/uploads/

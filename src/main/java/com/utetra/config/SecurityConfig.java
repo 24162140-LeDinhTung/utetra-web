@@ -76,6 +76,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/",
                     "/WEB-INF/**",
+                    "/uploads/**",
                     "/test",
                     "/auth/**",
                     "/error",
