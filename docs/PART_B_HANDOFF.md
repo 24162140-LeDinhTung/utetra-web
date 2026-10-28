@@ -1,3 +1,5 @@
+> Cập nhật 29/10/2026: xem [báo cáo ghép nhánh và sửa yêu cầu mới](MERGE_PART_B_2026-10-29.md).
+
 # Bàn giao phần B — UTETra
 
 > Ngày 28/10/2026: đã ghép dev `cb6587d`, giữ thay đổi nhóm và B, kiểm tra lại **26/26 test Java + 2/2 JavaScript thành công**. Chi tiết ở mục đầu PART_B_COMPLETION_2026-10-27.md. Chưa commit/push các chỉnh sửa.

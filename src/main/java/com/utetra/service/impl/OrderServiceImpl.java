@@ -176,6 +176,7 @@ public class OrderServiceImpl implements OrderService {
         });
     if (voucher != null) {
       voucher.setUsedCount(voucher.getUsedCount() + 1);
+      events.publishEvent(new OfferEvents.Changed(r.getShopId()));
       vouchers.save(voucher);
       VoucherUsage usage = new VoucherUsage();
       usage.setVoucher(voucher);

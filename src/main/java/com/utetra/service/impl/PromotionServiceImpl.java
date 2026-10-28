@@ -20,6 +20,7 @@ public class PromotionServiceImpl implements PromotionService {
   private final PromotionRepository promotions;
   private final PromotionProductRepository links;
   private final CommerceAccess access;
+  private final org.springframework.context.ApplicationEventPublisher events;
 
   private Promotion own(Long shop, Long owner, Long id) {
     access.shop(shop, owner);
@@ -68,6 +69,7 @@ public class PromotionServiceImpl implements PromotionService {
       link.setProduct(product);
       links.save(link);
     }
+    events.publishEvent(new OfferEvents.Changed(shop));
     return dto(p);
   }
 
@@ -75,6 +77,7 @@ public class PromotionServiceImpl implements PromotionService {
     Promotion p = own(shop, owner, id);
     p.setIsDeleted(true);
     promotions.save(p);
+    events.publishEvent(new OfferEvents.Changed(shop));
   }
 
   private PromotionItem dto(Promotion p) {

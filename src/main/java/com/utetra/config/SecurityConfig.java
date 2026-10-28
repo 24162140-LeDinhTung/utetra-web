@@ -80,7 +80,7 @@ public class SecurityConfig {
                     "/auth/**",
                     "/error",
                     "/error/**", // Mở khóa đường dẫn /error để trang báo lỗi có thể hiển thị
-                    "/favicon.ico",
+                    "/favicon.ico", "/uploads/**",
                     "/products", "/products/**",
                     "/shops", "/shops/**",
                     "/ws", "/ws/**", "/ws-native",

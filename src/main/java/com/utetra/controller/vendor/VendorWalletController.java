@@ -1,13 +1,15 @@
 package com.utetra.controller.vendor;
 
 import com.utetra.entity.Shop;
+import com.utetra.entity.User;
 import com.utetra.entity.Wallet;
 import com.utetra.entity.WalletTransaction;
-import com.utetra.entity.WithdrawRequest;
 import com.utetra.service.ShopService;
 import com.utetra.service.WalletService;
 import com.utetra.service.WithdrawService;
+import com.utetra.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -17,11 +19,14 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Controller
-@RequestMapping("/vendor")
+@RequestMapping("/vendor/wallet")
 public class VendorWalletController {
 
     @Autowired
     private WalletService walletService;
+
+    @Autowired
+    private com.utetra.service.CommerceAccess commerceAccess;
 
     @Autowired
     private ShopService shopService;
@@ -29,12 +34,42 @@ public class VendorWalletController {
     @Autowired
     private WithdrawService withdrawService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private User getCurrentUser(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal().equals("anonymousUser")) {
+            return null;
+        }
+        return userRepository.findByEmail(authentication.getName()).orElse(null);
+    }
+
+    // 0. TỰ ĐỘNG CHUYỂN HƯỚNG (Dành cho nút bấm trên Sidebar)
+    @GetMapping
+    public String redirectToWallet(Authentication authentication) {
+        User owner = getCurrentUser(authentication);
+        if (owner == null) return "redirect:/auth/login";
+
+        List<Shop> shops = shopService.getShopsByOwner(owner.getId());
+        if (shops.isEmpty()) return "redirect:/vendor/my-shops?error=noShop";
+
+        return "redirect:/vendor/wallet/shops/" + shops.get(0).getId();
+    }
+
     // 1. Xem ví và lịch sử giao dịch
-    @GetMapping("/shops/{shopId}/wallet")
-    public String viewWallet(@PathVariable Long shopId, Model model) {
-        Shop shop = shopService.getShopById(shopId);
+    @GetMapping("/shops/{shopId}")
+    public String viewWallet(@PathVariable Long shopId, Authentication authentication, Model model) {
+        User owner = getCurrentUser(authentication);
+        if (owner == null) return "redirect:/auth/login";
+
+        Shop shop = commerceAccess.shop(shopId, owner.getId());
         Wallet wallet = walletService.getWalletByShop(shopId);
         List<WalletTransaction> transactions = walletService.getTransactionHistory(wallet.getId());
+
+        // === THÊM DÒNG NÀY ĐỂ LẤY DANH SÁCH SHOP CHO DROPDOWN ===
+        List<Shop> shops = shopService.getShopsByOwner(owner.getId());
+        model.addAttribute("shops", shops);
+        // ========================================================
 
         model.addAttribute("shop", shop);
         model.addAttribute("wallet", wallet);
@@ -44,8 +79,22 @@ public class VendorWalletController {
 
     // 2. Hiển thị form yêu cầu rút tiền
     @GetMapping("/withdraw/create")
-    public String showWithdrawForm(@RequestParam Long shopId, Model model) {
-        model.addAttribute("shopId", shopId);
+    public String showWithdrawForm(@RequestParam(required = false) Long shopId,
+                                   Authentication authentication,
+                                   Model model) {
+        User owner = getCurrentUser(authentication);
+        if (owner == null) return "redirect:/auth/login";
+
+        List<Shop> shops = shopService.getShopsByOwner(owner.getId());
+        if (shops.isEmpty()) return "redirect:/vendor/my-shops?error=noShop";
+
+        if (shopId == null) {
+            shopId = shops.get(0).getId();
+        }
+
+        commerceAccess.shop(shopId, owner.getId());
+        model.addAttribute("shops", shops);
+        model.addAttribute("selectedShopId", shopId);
         return "vendor/withdraw-request";
     }
 
@@ -55,14 +104,19 @@ public class VendorWalletController {
             @RequestParam Long shopId,
             @RequestParam BigDecimal amount,
             @RequestParam String bankAccount,
-            RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes, Authentication authentication) {
+        User owner = getCurrentUser(authentication);
+        if (owner == null) return "redirect:/auth/login";
+        commerceAccess.shop(shopId, owner.getId());
+        if (amount == null || amount.signum() <= 0 || bankAccount == null || bankAccount.isBlank())
+            throw new IllegalArgumentException("Số tiền phải lớn hơn 0 và cần thông tin tài khoản nhận");
         try {
             withdrawService.requestWithdraw(shopId, amount, bankAccount);
             redirectAttributes.addFlashAttribute("message", "Gửi yêu cầu rút tiền thành công!");
-            return "redirect:/vendor/shops/" + shopId + "/wallet";
+            return "redirect:/vendor/wallet/shops/" + shopId;
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
-            return "redirect:/vendor/withdraw/create?shopId=" + shopId;
+            return "redirect:/vendor/wallet/withdraw/create?shopId=" + shopId;
         }
     }
 }

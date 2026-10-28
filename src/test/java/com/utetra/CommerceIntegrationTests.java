@@ -312,6 +312,47 @@ class CommerceIntegrationTests {
     }
   }
 
+
+  @Test
+  void voucherIsOncePerCustomerButSharedUntilGlobalLimitAndOffersRefresh() {
+    String code = "MULTI" + System.nanoTime();
+    var v = voucher(code, VoucherType.PRODUCT);
+    v.setDiscountValue(BigDecimal.TEN); v.setUsageLimit(2);
+    vouchers.save(shop.getId(), owner.getId(), null, v);
+    add(customer, product, 1, "{}");
+    assertThat(quotes.offers(customer.getId(), shop.getId())).anyMatch(x -> x.code().equals(code) && x.eligible());
+    assertThat(quotes.offers(customer.getId(), shop2.getId())).noneMatch(x -> x.code().equals(code));
+    var r = request(shop, PaymentMethod.COD); r.setVoucherCode(code);
+    quotes.quote(customer.getId(), r); quotes.quote(customer.getId(), r);
+    orders.createOrder(customer.getId(), r);
+    add(customer, product, 1, "{}");
+    assertThatThrownBy(() -> orders.createOrder(customer.getId(), r)).isInstanceOf(IllegalArgumentException.class);
+    assertThat(quotes.offers(customer.getId(), shop.getId())).noneMatch(x -> x.code().equals(code));
+    add(other, product, 1, "{}");
+    assertThat(quotes.offers(other.getId(), shop.getId())).anyMatch(x -> x.code().equals(code));
+    orders.createOrder(other.getId(), r);
+    var third = user(RoleName.ROLE_CUSTOMER); add(third, product, 1, "{}");
+    assertThatThrownBy(() -> orders.createOrder(third.getId(), r)).isInstanceOf(IllegalArgumentException.class);
+    assertThat(quotes.offers(third.getId(), shop.getId())).noneMatch(x -> x.code().equals(code));
+  }
+
+  @Test
+  void offersReflectEditingDeletionExpiryAndMinimumWithoutRestart() {
+    String code = "LIVE" + System.nanoTime();
+    var v = voucher(code, VoucherType.PRODUCT); v.setMinOrderAmount(new BigDecimal("50000"));
+    var saved = vouchers.save(shop.getId(), owner.getId(), null, v);
+    add(customer, product, 1, "{}");
+    assertThat(quotes.offers(customer.getId(), shop.getId())).anyMatch(x -> x.code().equals(code) && !x.eligible());
+    add(customer, product, 1, "{}");
+    assertThat(quotes.offers(customer.getId(), shop.getId())).anyMatch(x -> x.code().equals(code) && x.eligible());
+    v.setEndDate(LocalDateTime.now().minusMinutes(1));
+    vouchers.save(shop.getId(), owner.getId(), saved.id(), v);
+    assertThat(quotes.offers(customer.getId(), shop.getId())).noneMatch(x -> x.code().equals(code));
+    v.setEndDate(LocalDateTime.now().plusDays(1)); vouchers.save(shop.getId(), owner.getId(), saved.id(), v);
+    vouchers.delete(shop.getId(), owner.getId(), saved.id());
+    assertThat(quotes.offers(customer.getId(), shop.getId())).noneMatch(x -> x.code().equals(code));
+  }
+
   CreateVoucherRequest voucher(String code, VoucherType type) {
     CreateVoucherRequest v = new CreateVoucherRequest();
     v.setCode(code);
@@ -661,5 +702,28 @@ class CommerceIntegrationTests {
     r.setVoucherCode(code);
     var o = orders.createOrder(customer.getId(), r);
     assertThat(o.getTotalAmount()).isEqualByComparingTo("15000");
+  }
+
+  @Test
+  void menusAndOffersRespectAuthenticatedRoles() throws Exception {
+    var customerToken = jwt.generateAccessToken(customer.getId(), customer.getEmail());
+    var vendorToken = jwt.generateAccessToken(owner.getId(), owner.getEmail());
+    var admin = user(RoleName.ROLE_ADMIN);
+    var adminToken = jwt.generateAccessToken(admin.getId(), admin.getEmail());
+    assertThat(get("/", null).body()).doesNotContain("href=\"/vendor/products\"", "href=\"/admin/categories\"", "href=\"/customer/cart\"");
+    assertThat(get("/", customerToken).body()).contains("href=\"/customer/cart\"")
+        .doesNotContain("href=\"/vendor/products\"", "href=\"/admin/categories\"");
+    assertThat(get("/", vendorToken).body()).contains("href=\"/vendor/products\"")
+        .doesNotContain("href=\"/admin/categories\"");
+    assertThat(get("/", adminToken).body()).contains("href=\"/vendor/products\"", "href=\"/admin/categories\"");
+    assertThat(get("/api/customer/orders/offers?shopId=" + shop.getId(), null).statusCode()).isEqualTo(401);
+    assertThat(get("/api/customer/orders/offers?shopId=" + shop.getId(), customerToken).statusCode()).isEqualTo(200);
+    assertThat(get("/api/vendor/shops/" + shop.getId() + "/vouchers", customerToken).statusCode()).isEqualTo(403);
+    var foreignVendor = user(RoleName.ROLE_VENDOR);
+    var foreignToken = jwt.generateAccessToken(foreignVendor.getId(), foreignVendor.getEmail());
+    assertThat(get("/vendor/wallet/shops/" + shop.getId(), foreignToken).statusCode()).isEqualTo(403);
+    subscribe(customer, "/topic/shop/" + shop.getId() + "/offers");
+    assertThatThrownBy(() -> subscribe(customer, "/topic/shop/999999999/offers"))
+        .isInstanceOf(AccessDeniedException.class);
   }
 }

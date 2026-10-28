@@ -106,3 +106,8 @@ coverage/
 *.bak
 *.swp
 *~
+
+# Upload folder (local dev)
+/uploads/
+# Browser test dependencies
+node_modules/

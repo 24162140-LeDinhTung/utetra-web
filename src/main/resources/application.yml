@@ -4,6 +4,8 @@ spring:
 
   profiles:
     active: dev
+  config:
+    import: optional:classpath:application-commerce.yml
 
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:utetra_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=utf8&connectTimeout=10000&socketTimeout=10000

@@ -20,6 +20,9 @@ public class WalletTransaction extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
     private WalletTxType type;
+    @Column(name = "balance_after", nullable = false)
+    private BigDecimal balanceAfter;
 
+    @Column(name = "note")
     private String description;
 }

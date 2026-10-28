@@ -1,3 +1,4 @@
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -14,20 +15,20 @@
     <!-- HEADER -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand text-warning fw-bold" href="/">☕ UTETra</a>
+            <a class="navbar-brand text-warning fw-bold" href="${pageContext.request.contextPath}/">☕ UTETra</a>
             <div class="navbar-collapse d-flex flex-wrap gap-3">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/">Trang chủ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/products">Sản phẩm</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/customer/cart">Giỏ hàng</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/customer/orders">Đơn hàng</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/vendor/products">Người bán</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/admin/categories">Quản trị</a></li>
+                    <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/">Trang chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/products">Sản phẩm</a></li>
+<c:if test="${pageContext.request.isUserInRole('ROLE_CUSTOMER') or pageContext.request.isUserInRole('ROLE_VENDOR') or pageContext.request.isUserInRole('ROLE_ADMIN')}">                    <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/customer/cart">Giỏ hàng</a></li></c:if>
+<c:if test="${pageContext.request.isUserInRole('ROLE_CUSTOMER') or pageContext.request.isUserInRole('ROLE_VENDOR') or pageContext.request.isUserInRole('ROLE_ADMIN')}">                    <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/customer/orders">Đơn hàng</a></li></c:if>
+<c:if test="${pageContext.request.isUserInRole('ROLE_VENDOR') or pageContext.request.isUserInRole('ROLE_ADMIN')}">                    <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/vendor/products">Người bán</a></li></c:if>
+<c:if test="${pageContext.request.isUserInRole('ROLE_ADMIN')}">                    <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/admin/categories">Quản trị</a></li></c:if>
                 </ul>
                 <!-- Vùng chứa các nút Đăng nhập / Tài khoản -->
                 <div class="d-flex" id="auth-buttons">
-                    <a href="/auth/login" class="btn btn-outline-warning me-2">Đăng nhập</a>
-                    <a href="/auth/register" class="btn btn-warning text-dark fw-bold">Đăng ký</a>
+                    <a href="${pageContext.request.contextPath}/auth/login" class="btn btn-outline-warning me-2">Đăng nhập</a>
+                    <a href="${pageContext.request.contextPath}/auth/register" class="btn btn-warning text-dark fw-bold">Đăng ký</a>
                 </div>
             </div>
         </div>

@@ -22,7 +22,7 @@ public class CatalogManagementService {
   private final ProductAttributeRepository attributes;
   private final ProductAttributeValueRepository values;
   private final ProductImageRepository images;
-  private final CloudinaryService cloud;
+  private final StorageService storage;   // ⬅️ Đổi từ CloudinaryService cloud
 
   public record ValueInput(
       @NotBlank @Size(max = 255) String value,
@@ -103,7 +103,7 @@ public class CatalogManagementService {
   public Map<String, Object> upload(Long shop, Long owner, Long product, MultipartFile file) {
     Product p = access.product(shop, product, owner);
     validateMedia(file, false);
-    String url = cloud.uploadFile(file, "utetra/products/" + shop);
+    String url = storage.uploadFile(file, "utetra/products/" + shop);   // ⬅️ storage thay cloud
     ProductImage img = new ProductImage();
     img.setProduct(p);
     img.setImageUrl(url);
@@ -123,6 +123,8 @@ public class CatalogManagementService {
             .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ảnh"));
     img.setIsDeleted(true);
     images.save(img);
+    // (Tuỳ chọn) xóa file vật lý:
+    // storage.deleteFile(img.getImageUrl());
   }
 
   @Transactional(readOnly = true)

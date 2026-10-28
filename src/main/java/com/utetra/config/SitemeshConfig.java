@@ -22,14 +22,15 @@ public class SitemeshConfig {
                 // 1. Cấu hình riêng cho Vendor và Admin (Phải đặt lên đầu)
                 .addDecoratorPath("/vendor/*", "vendor-decorator.jsp")
                 .addDecoratorPath("/admin/*", "admin-decorator.jsp")
-                
+
                 // 2. Cấu hình cho Auth (Đăng nhập/Đăng ký)
                 .addDecoratorPath("/auth/*", "auth-decorator.jsp")
-                
+
                 // 3. Cấu hình mặc định cho Khách/Customer (Phải đặt ở dưới cùng)
                 .addDecoratorPath("/*", "main-decorator.jsp")
-                
+
                 // 4. Loại trừ các đường dẫn không cần giao diện
+                .addExcludedPath("/uploads/*")
                 .addExcludedPath("/api/*")
                 .addExcludedPath("/ws/*")
                 .addExcludedPath("/ws-native")
@@ -43,7 +44,8 @@ public class SitemeshConfig {
         });
 
     filter.addUrlPatterns("/*");
-    filter.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    // Initialize UTF-8 before SiteMesh buffers JSP output and renders decorators.
+    filter.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
     return filter;
   }
 }
