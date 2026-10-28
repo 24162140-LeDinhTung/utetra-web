@@ -33,6 +33,12 @@
                         <span class="text-muted">Chưa có tài khoản? </span>
                         <a href="/auth/register" class="text-warning fw-bold text-decoration-none">Đăng ký ngay</a>
                     </div>
+                    <div style="text-align: right; margin-top: 6px; margin-bottom: 12px;">
+					    <a href="/auth/forgot-password"
+					       style="font-size: 14px; color: #667eea; text-decoration: none;">
+					        Quên mật khẩu?
+					    </a>
+					</div>
                 </div>
             </div>
         </div>
