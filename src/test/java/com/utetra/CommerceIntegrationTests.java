@@ -56,6 +56,9 @@ class CommerceIntegrationTests {
   @Autowired org.springframework.core.env.ConfigurableEnvironment environment;
   @Autowired PaymentAvailability availability;
   @Autowired OrderQuoteService quotes;
+  @Autowired WalletRepository wallets;
+  @Autowired WalletTransactionRepository walletLedger;
+  @Autowired OrderWalletSettlement settlement;
   @LocalServerPort int port;
   User customer, other, owner;
   Shop shop, shop2;
@@ -444,15 +447,21 @@ class CommerceIntegrationTests {
                 .start(customer.getId(), o.getId(), PaymentMethod.VNPAY, "127.0.0.1")
                 .get("reference"))
         .isEqualTo(ref);
+    assertThat(wallets.findByShopId(shop.getId())).isEmpty();
     var bad = vnpay(ref, "7500000");
     bad.put("vnp_Amount", "1");
     assertThat(payments.vnpayCallback(bad).get("RspCode")).isEqualTo("97");
     assertThat(payments.vnpayCallback(vnpay(ref, "1")).get("RspCode")).isEqualTo("04");
     assertThat(payments.vnpayCallback(vnpay(ref, "7500000")).get("RspCode")).isEqualTo("00");
+    assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
     int count = history.findByOrderId(o.getId()).size();
     assertThat(payments.vnpayCallback(vnpay(ref, "7500000")).get("RspCode")).isEqualTo("02");
     assertThat(history.findByOrderId(o.getId())).hasSize(count);
-    assertThat(orders.getDetail(customer.getId(), o.getId()).getStatus()).isEqualTo("CONFIRMED");
+    assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
+    advance(o.getId(), OrderStatus.PICKED_UP);
+    advance(o.getId(), OrderStatus.SHIPPING);
+    advance(o.getId(), OrderStatus.DELIVERED);
+    assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
   }
 
   @Test
@@ -469,6 +478,7 @@ class CommerceIntegrationTests {
     var finalOrder = orders.getDetail(customer.getId(), o.getId());
     assertThat(finalOrder.getStatus()).isEqualTo("CANCELLED");
     assertThat(finalOrder.getPaymentStatus()).isEqualTo("SUCCESS");
+    assertThat(wallets.findByShopId(shop.getId())).isEmpty();
     assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(20);
   }
 
@@ -626,8 +636,10 @@ class CommerceIntegrationTests {
     p.put("amount", 75000);
     signMomo(p);
     payments.momoCallback(p);
+    assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
     int count = history.findByOrderId(o.getId()).size();
     payments.momoCallback(p);
+    assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
     assertThat(history.findByOrderId(o.getId())).hasSize(count);
     assertThat(orders.getDetail(customer.getId(), o.getId()).getPaymentStatus())
         .isEqualTo("SUCCESS");
@@ -725,5 +737,41 @@ class CommerceIntegrationTests {
     subscribe(customer, "/topic/shop/" + shop.getId() + "/offers");
     assertThatThrownBy(() -> subscribe(customer, "/topic/shop/999999999/offers"))
         .isInstanceOf(AccessDeniedException.class);
+  }
+
+  @Test
+  void codCreditsOnlyOnDeliveryAndReversesOnceOnReturn() throws Exception {
+    var o = buy(PaymentMethod.COD);
+    assertThat(wallets.findByShopId(shop.getId())).isEmpty();
+    advance(o.getId(), OrderStatus.PICKED_UP);
+    advance(o.getId(), OrderStatus.SHIPPING);
+    assertThat(wallets.findByShopId(shop.getId())).isEmpty();
+    advance(o.getId(), OrderStatus.DELIVERED);
+    assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
+    var pool = Executors.newFixedThreadPool(2);
+    try {
+      var first = pool.submit(() -> settlement.reconcile(o.getId()));
+      var second = pool.submit(() -> settlement.reconcile(o.getId()));
+      first.get(15, TimeUnit.SECONDS); second.get(15, TimeUnit.SECONDS);
+    } finally { pool.shutdownNow(); }
+    var wallet = wallets.findByShopId(shop.getId()).orElseThrow();
+    assertThat(wallet.getBalance()).isEqualByComparingTo("60000");
+    assertThat(walletLedger.findByWalletId(wallet.getId())).hasSize(1);
+    advance(o.getId(), OrderStatus.RETURNED);
+    advance(o.getId(), OrderStatus.REFUNDED);
+    settlement.reconcile(o.getId());
+    assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("0");
+    assertThat(walletLedger.findByWalletId(wallet.getId())).hasSize(2);
+  }
+
+  @Test
+  void paidOnlineCancellationRecoversShopIncomeWithoutPretendingGatewayRefund() {
+    var o = buy(PaymentMethod.VNPAY);
+    var started = payments.start(customer.getId(), o.getId(), PaymentMethod.VNPAY, "127.0.0.1");
+    payments.vnpayCallback(vnpay(started.get("reference"), "7500000"));
+    var cancel = new CancelOrderRequest(); cancel.setReason("Khách đổi ý");
+    orders.cancelOrder(customer.getId(), o.getId(), cancel);
+    assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("0");
+    assertThat(orders.getDetail(customer.getId(), o.getId()).getPaymentStatus()).isEqualTo("SUCCESS");
   }
 }

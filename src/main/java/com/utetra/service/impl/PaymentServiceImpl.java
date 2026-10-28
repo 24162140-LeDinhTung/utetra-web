@@ -29,6 +29,7 @@ public class PaymentServiceImpl implements PaymentService {
   private final OrderStatusHistoryRepository histories;
   private final CommerceAccess access;
   private final ApplicationEventPublisher events;
+  private final OrderWalletSettlement settlement;
 
   @Value("${payment.vnpay.tmn-code:}")
   private String tmn;
@@ -263,6 +264,7 @@ public class PaymentServiceImpl implements PaymentService {
     if (o.getPaymentStatus() != PaymentStatus.SUCCESS) o.setPaymentStatus(tx.getStatus());
     if (ok && o.getStatus() == OrderStatus.NEW) o.setStatus(OrderStatus.CONFIRMED);
     orders.save(o);
+    settlement.reconcile(o.getId());
     OrderStatusHistory h = new OrderStatusHistory();
     h.setOrder(o);
     h.setStatus(o.getStatus());

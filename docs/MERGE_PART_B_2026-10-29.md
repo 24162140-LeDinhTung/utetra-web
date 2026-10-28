@@ -1,3 +1,5 @@
+> Cập nhật theo yêu cầu mới: đã tích hợp cộng ví COD khi giao và online khi callback thành công; xem [luồng cộng ví](ORDER_WALLET_SETTLEMENT_2026-10-29.md). Ghi chú chưa tích hợp cộng ví trong báo cáo cũ bên dưới đã được thay thế.
+
 # Bàn giao ghép nhánh và hoàn thiện phần B — 29/10/2026
 
 ## Bản được so sánh

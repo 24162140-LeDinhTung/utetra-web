@@ -33,16 +33,15 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     public Wallet getWalletByShop(Long shopId) {
-        return walletRepository.findAll().stream()
-                .filter(w -> w.getShop().getId().equals(shopId))
-                .findFirst()
+        return walletRepository.findByShopId(shopId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy ví của shop"));
     }
 
     @Override
     @Transactional
     public void addMoney(Long shopId, BigDecimal amount, String description) {
-        Wallet wallet = getWalletByShop(shopId);
+        if (amount == null || amount.signum() <= 0) throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        Wallet wallet = walletRepository.lockByShopId(shopId).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ví"));
         wallet.setBalance(wallet.getBalance().add(amount));
         walletRepository.save(wallet);
 
@@ -58,7 +57,8 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public void deductMoney(Long shopId, BigDecimal amount, String description) {
-        Wallet wallet = getWalletByShop(shopId);
+        if (amount == null || amount.signum() <= 0) throw new IllegalArgumentException("Số tiền phải lớn hơn 0");
+        Wallet wallet = walletRepository.lockByShopId(shopId).orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ví"));
         if (wallet.getBalance().compareTo(amount) < 0) {
             throw new RuntimeException("Số dư trong ví không đủ");
         }

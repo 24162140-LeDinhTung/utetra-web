@@ -11,4 +11,5 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
     
     // Lấy lịch sử giao dịch của 1 ví
     List<WalletTransaction> findByWalletId(Long walletId);
+    java.util.Optional<WalletTransaction> findByOrderIdAndType(Long orderId, com.utetra.enums.WalletTxType type);
 }

@@ -44,6 +44,8 @@ class PartBSeedMigrationTests {
       run(c, "V6__seed_wallet_and_withdraw_data.sql");
       assertThat(scalar(c, "SELECT COUNT(*) FROM wallets")).isEqualTo(3);
       assertThat(scalar(c, "SELECT COUNT(*) FROM wallets WHERE balance < 0")).isZero();
+      run(c, "V7__link_wallet_income_to_order.sql");
+      assertThat(scalar(c, "SELECT COUNT(*) FROM wallet_transactions WHERE order_id IS NOT NULL")).isZero();
       if (existing) {
         assertThat(scalar(c, "SELECT COUNT(*) FROM users WHERE id=800 AND password='unchanged'")).isEqualTo(1);
         assertThat(scalar(c, "SELECT COUNT(*) FROM products WHERE id=600 AND stock=17 AND price=12345")).isEqualTo(1);

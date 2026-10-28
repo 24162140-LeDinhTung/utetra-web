@@ -36,6 +36,7 @@ public class OrderServiceImpl implements OrderService {
   private final ProductPricing pricing;
   private final PaymentAvailability paymentAvailability;
   private final ApplicationEventPublisher events;
+  private final OrderWalletSettlement settlement;
 
   @Value("${commerce.shipping-fee:15000}")
   private BigDecimal shippingFee;
@@ -263,6 +264,7 @@ public class OrderServiceImpl implements OrderService {
     }
     o.setStatus(next);
     orders.save(o);
+    settlement.reconcile(o.getId());
     history(o, note);
     publish(o);
   }

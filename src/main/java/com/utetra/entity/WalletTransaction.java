@@ -6,13 +6,16 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "wallet_transactions")
+@Table(name = "wallet_transactions", uniqueConstraints = @UniqueConstraint(name = "uk_wallet_order_type", columnNames = {"order_id", "type"}))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class WalletTransaction extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "wallet_id")
     private Wallet wallet;
+
+    @Column(name = "order_id")
+    private Long orderId;
 
     @Column(nullable = false)
     private BigDecimal amount;
