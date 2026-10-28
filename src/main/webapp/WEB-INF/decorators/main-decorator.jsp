@@ -1,4 +1,4 @@
-<%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" language="java" %>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -44,47 +44,26 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    
     <!-- SCRIPT XỬ LÝ ĐỔI NÚT KHI ĐÃ ĐĂNG NHẬP -->
     <script>
-      (() => {
         // Kiểm tra xem có token trong localStorage không
-        let token = localStorage.getItem('accessToken');
-        const contextPath = '${pageContext.request.contextPath}';
-        // localStorage survives browser restarts; the session cookie does not.
-        // Expiry here only controls navigation. The server still verifies the signature.
-        if (token) {
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-                if (!payload.exp || payload.exp * 1000 <= Date.now()) throw new Error('expired');
-                document.cookie = 'accessToken=' + encodeURIComponent(token) + '; path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
-            } catch (e) {
-                clearLogin();
-                token = null;
-            }
-        }
-
+        const token = localStorage.getItem('accessToken');
+        
         if (token) {
             // Nếu có token, đổi nút Đăng nhập/Đăng ký thành nút Tài khoản/Đăng xuất
             document.getElementById('auth-buttons').innerHTML = `
-                <a href="${pageContext.request.contextPath}/customer/profile" class="btn btn-outline-light me-2">Tài khoản</a>
+                <a href="/customer/profile" class="btn btn-outline-light me-2">Tài khoản</a>
                 <button onclick="logout()" class="btn btn-danger fw-bold">Đăng xuất</button>
             `;
         }
-
-        function clearLogin() {
+        
+        function logout() {
             // Xóa token và chuyển về trang chủ
             localStorage.removeItem('accessToken');
             localStorage.removeItem('userRole');
-            localStorage.removeItem('userRoles');
-            localStorage.removeItem('refreshToken');
-            document.cookie = 'accessToken=; Max-Age=0; path=/; SameSite=Lax';
+            window.location.href = '/';
         }
-        window.logout = function () {
-            clearLogin();
-            window.location.href = contextPath + '/';
-        };
-      })();
     </script>
     <sitemesh:write property='script'/>
 </body>

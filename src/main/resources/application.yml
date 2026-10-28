@@ -6,7 +6,7 @@ spring:
     active: dev
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:utetra_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=utf8&connectTimeout=10000&socketTimeout=10000
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/${DB_NAME:utetra_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=utf8
     username: ${DB_USER:utetra}
     password: ${DB_PASSWORD:utetra123}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -41,14 +41,12 @@ spring:
           writetimeout: 5000
 
   servlet:
+    encoding:
+      charset: UTF-8
+      force: true
     multipart:
       max-file-size: 50MB
       max-request-size: 100MB
-    # Cấu hình UTF-8 được chuyển sang đây theo chuẩn Spring Boot mới
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
 
   mvc:
     view:
@@ -57,17 +55,16 @@ spring:
 
 server:
   port: 8080
-
+ 
 jwt:
   secret: utetra-super-secret-key-change-in-production-minimum-256-bits-for-hs256-algorithm
   access-expire-minutes: 15
   refresh-expire-days: 7
 
-# ================== UPLOAD (LOCAL STORAGE) ==================
-app:
-  upload:
-    dir: ${UPLOAD_DIR:./uploads}
-    url-prefix: /uploads
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:your-cloud-name}
+  api-key: ${CLOUDINARY_API_KEY:your-api-key}
+  api-secret: ${CLOUDINARY_API_SECRET:your-api-secret}
 
 logging:
   level:

@@ -33,8 +33,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     public Wallet getWalletByShop(Long shopId) {
-        // Tìm ví theo shopId. Nếu Repo chưa có hàm này, bạn cần thêm vào WalletRepository:
-        // Wallet findByShopId(Long shopId);
         return walletRepository.findAll().stream()
                 .filter(w -> w.getShop().getId().equals(shopId))
                 .findFirst()
@@ -51,7 +49,8 @@ public class WalletServiceImpl implements WalletService {
         WalletTransaction tx = new WalletTransaction();
         tx.setWallet(wallet);
         tx.setAmount(amount);
-        tx.setType(WalletTxType.ORDER_INCOME); // Hoặc truyền Type vào hàm
+        tx.setBalanceAfter(wallet.getBalance()); // <-- ĐÃ THÊM DÒNG NÀY
+        tx.setType(WalletTxType.ORDER_INCOME); 
         tx.setDescription(description);
         transactionRepository.save(tx);
     }
@@ -69,6 +68,7 @@ public class WalletServiceImpl implements WalletService {
         WalletTransaction tx = new WalletTransaction();
         tx.setWallet(wallet);
         tx.setAmount(amount.negate());
+        tx.setBalanceAfter(wallet.getBalance()); // <-- ĐÃ THÊM DÒNG NÀY
         tx.setType(WalletTxType.WITHDRAW);
         tx.setDescription(description);
         transactionRepository.save(tx);
@@ -76,6 +76,6 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     public List<WalletTransaction> getTransactionHistory(Long walletId) {
-        return transactionRepository.findAll(); // Bạn cần thêm hàm findByWalletId vào Repo
+        return transactionRepository.findAll(); 
     }
 }

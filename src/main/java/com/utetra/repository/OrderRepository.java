@@ -2,10 +2,13 @@ package com.utetra.repository;
 
 import com.utetra.entity.Order;
 import com.utetra.enums.OrderStatus;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
@@ -19,7 +22,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
   Page<Order> findByShopId(Long shopId, Pageable pageable);
 
+  @Query("SELECT o FROM Order o LEFT JOIN FETCH o.user WHERE o.shop.id = :shopId")
+  List<Order> findByShopIdWithUser(@Param("shopId") Long shopId);
+
+  // === THÊM HÀM NÀY ĐỂ FIX LỖI Ở TRANG CHI TIẾT ===
+  @Query("SELECT o FROM Order o LEFT JOIN FETCH o.user LEFT JOIN FETCH o.shop WHERE o.id = :id")
+  Optional<Order> findByIdWithUserAndShop(@Param("id") Long id);
+
   @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-  @org.springframework.data.jpa.repository.Query("select o from Order o where o.id = :id")
+  @Query("select o from Order o where o.id = :id")
   Optional<Order> lockById(Long id);
 }

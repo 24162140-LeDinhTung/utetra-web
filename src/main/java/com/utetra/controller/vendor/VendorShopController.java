@@ -1,13 +1,11 @@
 package com.utetra.controller.vendor;
 
 import com.utetra.entity.Shop;
-import org.springframework.security.core.Authentication;
 import com.utetra.entity.User;
 import com.utetra.service.ShopService;
 import com.utetra.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @Controller
-@RequestMapping("/vendor/shops")
+@RequestMapping("/vendor/my-shops") // <-- ĐÃ SỬA THÀNH /my-shops CHO KHỚP VỚI URL VÀ SIDEBAR
 public class VendorShopController {
 
     @Autowired
@@ -24,9 +22,8 @@ public class VendorShopController {
     @Autowired
     private UserRepository userRepository;
 
-    // Hàm lấy User đang đăng nhập
+    // Hàm lấy User đang đăng nhập an toàn
     private User getCurrentUser(Authentication authentication) {
-        // Kiểm tra nếu chưa đăng nhập (authentication bị null) thì trả về null
         if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal().equals("anonymousUser")) {
             return null;
         }
@@ -43,15 +40,11 @@ public class VendorShopController {
             return "redirect:/auth/login";
         }
 
-        // --- THÊM 2 DÒNG NÀY ĐỂ DEBUG ---
         System.out.println(">>> ID User đang đăng nhập: " + owner.getId() + " - Email: " + owner.getEmail());
-        // ---------------------------------
 
         List<Shop> shops = shopService.getShopsByOwner(owner.getId());
         
-        // --- THÊM DÒNG NÀY NỮA ---
         System.out.println(">>> Số lượng shop tìm thấy: " + shops.size());
-        // -------------------------
 
         model.addAttribute("shops", shops);
         return "vendor/shop-list";
@@ -75,7 +68,7 @@ public class VendorShopController {
         Shop shop = shopService.getShopById(id);
         // Kiểm tra quyền sở hữu
         if (!shop.getOwner().getId().equals(owner.getId())) {
-            return "redirect:/vendor/shops?error=unauthorized";
+            return "redirect:/vendor/my-shops?error=unauthorized"; // <-- SỬA REDIRECT
         }
         model.addAttribute("shop", shop);
         return "vendor/shop-form";
@@ -90,13 +83,11 @@ public class VendorShopController {
         }
         
         if (shopForm.getId() == null) {
-            // Tạo mới
             shopService.createShop(owner, shopForm.getName(), shopForm.getDescription());
         } else {
-            // Cập nhật
             shopService.updateShop(shopForm.getId(), shopForm.getName(), shopForm.getDescription(), 
                                    shopForm.getAvatarUrl(), shopForm.getCoverUrl());
         }
-        return "redirect:/vendor/shops"; // Quay lại trang danh sách
+        return "redirect:/vendor/my-shops"; // <-- SỬA REDIRECT
     }
 }

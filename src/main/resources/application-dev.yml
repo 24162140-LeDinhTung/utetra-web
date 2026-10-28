@@ -1,7 +1,7 @@
 spring:
   datasource:
     # Kết nối tới MySQL trong Docker (Đã đổi port về 3307 cho khớp với docker-compose.yml)
-    url: jdbc:mysql://localhost:3307/utetra_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3307/utetra_db?useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8
     username: utetra       # Đã đổi về utetra
     password: utetra123    # Đã đổi về utetra123
     driver-class-name: com.mysql.cj.jdbc.Driver

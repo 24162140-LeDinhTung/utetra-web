@@ -2,13 +2,16 @@ package com.utetra.controller.vendor;
 
 import com.utetra.dto.request.product.*;
 import com.utetra.dto.response.product.*;
+import com.utetra.entity.Shop;
 import com.utetra.security.UserPrincipal;
 import com.utetra.service.*;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +22,7 @@ public class VendorProductController {
   private final ProductService products;
   private final CommerceAccess access;
   private final CatalogManagementService catalog;
+  private final ShopService shopService; // Đã thêm ShopService để gọi hàm
 
   @GetMapping("/{id}/images")
   public java.util.List<Map<String, Object>> images(
@@ -30,7 +34,13 @@ public class VendorProductController {
   public ProductSearchResponse list(
       @PathVariable Long shopId,
       @AuthenticationPrincipal UserPrincipal u,
-      @RequestParam(defaultValue = "0") int page) {
+      @RequestParam(defaultValue = "0") int page,
+      Model model) { // Đã thêm Model vào tham số
+
+   
+    List<Shop> shops = shopService.getShopsByOwner(u.getId());
+    model.addAttribute("shops", shops);
+
     return products.getVendorProducts(
         shopId,
         u.getId(),

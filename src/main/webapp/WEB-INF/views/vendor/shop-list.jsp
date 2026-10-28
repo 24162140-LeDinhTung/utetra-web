@@ -1,38 +1,41 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Quản lý Cửa hàng</title>
-</head>
-<body>
-    <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3>Danh sách Cửa hàng của tôi</h3>
-            <a href="${pageContext.request.contextPath}/vendor/shops/create" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Tạo cửa hàng mới
-            </a>
-        </div>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 
-        <c:if test="${not empty message}">
-            <div class="alert alert-success">${message}</div>
-        </c:if>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-dark m-0"><i class="bi bi-shop me-2 text-primary"></i>Danh sách Cửa hàng của tôi</h3>
+    <a href="${pageContext.request.contextPath}/vendor/my-shops/create" class="btn btn-primary shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> Tạo cửa hàng mới
+    </a>
+</div>
 
-        <table class="table table-bordered table-hover">
-            <thead class="table-dark">
+<c:if test="${not empty message}">
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</c:if>
+
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-muted">
                 <tr>
-                    <th>ID</th>
+                    <th width="80" class="ps-4">ID</th>
                     <th>Tên Shop</th>
                     <th>Trạng thái</th>
                     <th>Ngày tạo</th>
-                    <th>Hành động</th>
+                    <th width="200" class="text-end pe-4">Hành động</th>
                 </tr>
             </thead>
             <tbody>
                 <c:forEach items="${shops}" var="shop">
                     <tr>
-                        <td>${shop.id}</td>
-                        <td>${shop.name}</td>
+                        <td class="ps-4 fw-bold">#${shop.id}</td>
+                        <td>
+                            <div class="fw-bold text-dark">${shop.name}</div>
+                            <div class="text-muted small">${shop.description}</div>
+                        </td>
                         <td>
                             <c:choose>
                                 <c:when test="${shop.status == 'ACTIVE'}"><span class="badge bg-success">Hoạt động</span></c:when>
@@ -41,18 +44,23 @@
                                 <c:otherwise><span class="badge bg-secondary">${shop.status}</span></c:otherwise>
                             </c:choose>
                         </td>
-                        <td>${shop.createdAt}</td>
-                        <td>
-                            <a href="${pageContext.request.contextPath}/vendor/shops/edit/${shop.id}" class="btn btn-sm btn-info">Sửa</a>
-                            <a href="${pageContext.request.contextPath}/vendor/shops/${shop.id}/wallet" class="btn btn-sm btn-success">Xem Ví</a>
+                        <td class="text-muted">
+                            <i class="bi bi-calendar3 me-1"></i> ${shop.createdAt}
+                        </td>
+                        <td class="text-end pe-4">
+                            <a href="${pageContext.request.contextPath}/vendor/my-shops/edit/${shop.id}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Sửa
+                            </a>
+                            <a href="${pageContext.request.contextPath}/vendor/wallet/shops/${shop.id}" class="btn btn-sm btn-success">
+                                <i class="bi bi-wallet2"></i> Xem Ví
+                            </a>
                         </td>
                     </tr>
                 </c:forEach>
                 <c:if test="${empty shops}">
-                    <tr><td colspan="5" class="text-center">Bạn chưa có cửa hàng nào.</td></tr>
+                    <tr><td colspan="5" class="text-center py-4 text-muted">Bạn chưa có cửa hàng nào.</td></tr>
                 </c:if>
             </tbody>
         </table>
     </div>
-</body>
-</html>
+</div>
