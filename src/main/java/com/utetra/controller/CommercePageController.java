@@ -49,8 +49,36 @@ public class CommercePageController {
   public String page2() { return "customer/payment"; }
   @GetMapping("/customer/orders")
   public String page3() { return "customer/order-history"; }
+  
   @GetMapping("/customer/orders/{id}")
-  public String page4() { return "customer/order-detail"; }
+  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  public String page4(@PathVariable Long id, Authentication authentication, Model model) {
+      // 1. Kiểm tra đăng nhập
+      if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal().equals("anonymousUser")) {
+          return "redirect:/auth/login";
+      }
+      
+      User customer = userRepository.findByEmail(authentication.getName()).orElse(null);
+      if (customer == null) return "redirect:/auth/login";
+
+      // 2. Lấy thông tin đơn hàng
+      Order order = orderRepository.findById(id).orElse(null);
+      
+      // 3. Bảo mật: Khách hàng chỉ được xem đơn của chính mình
+      if (order == null || !order.getUser().getId().equals(customer.getId())) {
+          return "redirect:/customer/orders"; 
+      }
+
+      // 4. Lấy danh sách món trong đơn
+      List<OrderItem> items = orderItemRepository.findByOrderId(id);
+
+      // 5. Truyền dữ liệu sang JSP
+      model.addAttribute("order", order);
+      model.addAttribute("items", items);
+
+      return "customer/order-detail";
+  }
+  
   @GetMapping("/customer/review")
   public String page5() { return "customer/review-form"; }
 
