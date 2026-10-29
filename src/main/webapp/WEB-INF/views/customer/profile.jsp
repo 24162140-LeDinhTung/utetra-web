@@ -1,23 +1,28 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <title>Trang cá nhân - UTETra</title>
 </head>
 <body>
-    <div class="row">
+    <header class="customer-page-intro">
+        <p class="customer-eyebrow">TÀI KHOẢN UTETRA</p>
+        <h1>Góc nhỏ của bạn</h1>
+        <p class="customer-page-note">Lưu những món hợp gu và chăm chút thông tin của bạn.</p>
+    </header>
+    <div class="row customer-account">
         <!-- Cột trái: Menu -->
-        <div class="col-md-3 mb-4">
-            <div class="card shadow-sm border-0 rounded-4 mb-4 text-center p-4">
-                <img id="avatarImg" src="https://via.placeholder.com/150" class="rounded-circle mx-auto mb-3 shadow" style="width: 120px; height: 120px; object-fit: cover;">
+        <div class="col-md-3 mb-4 customer-account-sidebar">
+            <div class="card shadow-sm border-0 rounded-4 mb-4 text-center p-4 customer-account-avatar">
+                <img id="avatarImg" alt="Ảnh đại diện của bạn" src="${pageContext.request.contextPath}/images/customer-avatar.svg" class="rounded-circle mx-auto mb-3 shadow" style="width: 120px; height: 120px; object-fit: cover;">
                 <h5 id="userFullName" class="fw-bold mb-1">Đang tải...</h5>
                 <p id="userEmail" class="text-muted small mb-3"></p>
                 
-                <input type="file" id="avatarFile" class="form-control form-control-sm mb-2" accept="image/*">
+                <input type="file" id="avatarFile" aria-label="Chọn ảnh đại diện mới" class="form-control form-control-sm mb-2" accept="image/*">
                 <button onclick="uploadAvatar()" class="btn btn-warning fw-bold btn-sm w-100">Cập nhật ảnh</button>
             </div>
 
-            <div class="list-group shadow-sm border-0 rounded-4 overflow-hidden">
+            <div class="list-group shadow-sm border-0 rounded-4 overflow-hidden customer-account-menu">
                 <a href="#" class="list-group-item list-group-item-action active fw-bold" id="menu-info" onclick="showTab('info')">Thông tin cá nhân</a>
                 <a href="#" class="list-group-item list-group-item-action fw-bold" id="menu-favorites" onclick="showTab('favorites')">Sản phẩm yêu thích</a>
                 <a href="#" class="list-group-item list-group-item-action fw-bold" id="menu-history" onclick="showTab('history')">Sản phẩm đã xem</a>
@@ -25,7 +30,7 @@
         </div>
 
         <!-- Cột phải: Nội dung -->
-        <div class="col-md-9">
+        <div class="col-md-9 customer-account-content">
             <!-- TAB 1: THÔNG TIN -->
             <div id="tab-info" class="card shadow-sm border-0 rounded-4">
                 <div class="card-header bg-white border-0 pt-4 px-4">

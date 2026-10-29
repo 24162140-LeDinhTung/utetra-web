@@ -1,0 +1,23 @@
+/* Real drink photos keep their full proportions inside the existing customer frames. */
+.customer-site img.customer-drink-photo {
+  display: block;
+  width: 100%;
+  object-fit: contain !important;
+  object-position: center !important;
+  background: #fffdf8 !important;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.customer-site #commerce[data-page="product-detail"] #commerce-content > .ute-panel:first-of-type > .ute-gallery > img.customer-drink-photo {
+  height: 460px;
+  min-height: 0;
+  max-height: 510px;
+  padding: 16px;
+}
+@media (max-width: 767px) {
+  .customer-site img.customer-drink-photo { padding: 7px; }
+  .customer-site #commerce[data-page="product-detail"] #commerce-content > .ute-panel:first-of-type > .ute-gallery > img.customer-drink-photo {
+    height: clamp(240px, 70vw, 400px);
+    padding: 10px;
+  }
+}
