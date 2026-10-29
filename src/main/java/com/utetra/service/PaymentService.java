@@ -10,5 +10,9 @@ public interface PaymentService {
 
   Map<String, String> vnpayCallback(Map<String, String> parameters);
 
+  Map<String, String> startSepay(Long userId, Long orderId);
+
+  void sepayCallback(String authorization, Map<String, Object> parameters);
+
   void momoCallback(Map<String, Object> parameters);
 }

@@ -128,6 +128,7 @@
                         <td class="fw-bold text-dark">\${shop.name}</td>
                         <td><span class="badge \${badgeClass}">\${shop.status}</span></td>
                         <td class="text-end pe-4">
+                            <a href="${pageContext.request.contextPath}/admin/users/shops/\${shop.id}" class="btn btn-sm btn-outline-primary">Xem chi tiết</a>
                             <button onclick="deleteShop(\${shop.id})" class="btn btn-sm btn-outline-danger" title="Xóa Shop">
                                 <i class="bi bi-trash"></i>
                             </button>

@@ -94,6 +94,11 @@ public class OrderServiceImpl implements OrderService {
       prices.put(i.getId(), price);
       subtotal = subtotal.add(price.multiply(BigDecimal.valueOf(i.getQuantity())));
     }
+    var promo = pricing.selectedPromotion(r.getShopId(), r.getPromotionId(), quantities.keySet());
+    BigDecimal promotionDiscount = lines.stream().map(i -> pricing.promotionDiscount(
+        locked.get(i.getProduct().getId()), prices.get(i.getId()), promo)
+        .multiply(BigDecimal.valueOf(i.getQuantity()))).reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal voucherBase = subtotal.subtract(promotionDiscount);
     BigDecimal productDiscount = BigDecimal.ZERO;
     if (shippingFee.signum() < 0)
       throw new IllegalStateException("Phí giao hàng cấu hình không hợp lệ");
@@ -109,7 +114,7 @@ public class OrderServiceImpl implements OrderService {
         throw new IllegalArgumentException("Mã giảm giá thuộc cửa hàng khác");
       if (now.isBefore(voucher.getStartDate())
           || !now.isBefore(voucher.getEndDate())
-          || subtotal.compareTo(voucher.getMinOrderAmount()) < 0
+          || voucherBase.compareTo(voucher.getMinOrderAmount()) < 0
           || voucher.getUsageLimit() != null && voucher.getUsedCount() >= voucher.getUsageLimit()
           || usages.countByVoucherIdAndUserId(voucher.getId(), userId) > 0)
         throw new IllegalArgumentException("Mã giảm giá chưa đủ điều kiện hoặc đã hết lượt");
@@ -124,7 +129,7 @@ public class OrderServiceImpl implements OrderService {
       else
         productDiscount =
             ProductPricing.discount(
-                subtotal,
+                voucherBase,
                 voucher.getDiscountType(),
                 voucher.getDiscountValue(),
                 voucher.getMaxDiscountAmount());
@@ -134,9 +139,9 @@ public class OrderServiceImpl implements OrderService {
     o.setUser(user);
     o.setShop(cart.getShop());
     o.setSubtotal(subtotal);
-    o.setDiscountAmount(productDiscount);
+    o.setDiscountAmount(productDiscount.add(promotionDiscount));
     o.setShippingFee(shipping);
-    o.setTotalAmount(subtotal.subtract(productDiscount).add(shipping));
+    o.setTotalAmount(subtotal.subtract(productDiscount).subtract(promotionDiscount).add(shipping));
     if (r.getExpectedTotalAmount() != null
         && r.getExpectedTotalAmount().compareTo(o.getTotalAmount()) != 0)
       throw new IllegalArgumentException(

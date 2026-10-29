@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class OrderQuoteService {
   private final CartService carts;
+  private final ProductPricing pricing;
+  private final PromotionRepository promotions;
+  private final PromotionProductRepository promotionLinks;
   private final ProductRepository products;
   private final VoucherRepository vouchers;
   private final VoucherUsageRepository usages;
@@ -30,7 +33,7 @@ public class OrderQuoteService {
       BigDecimal subtotal,
       BigDecimal discountAmount,
       BigDecimal shippingFee,
-      BigDecimal totalAmount) {}
+      BigDecimal totalAmount, BigDecimal promotionDiscountAmount, BigDecimal voucherDiscountAmount) {}
 
 
   public record Offer(String code, String type, String discountType, BigDecimal value,
@@ -59,6 +62,26 @@ public class OrderQuoteService {
         }).toList();
   }
 
+  public record PromotionOffer(Long id, String name, String discountType, BigDecimal value,
+      LocalDateTime startDate, LocalDateTime endsAt, java.util.List<Long> productIds, boolean eligible) {}
+
+  public java.util.List<PromotionOffer> promotions(Long user, Long shop, java.util.List<Long> ids) {
+    var cart = carts.getCart(user).stream().filter(c -> c.getShopId().equals(shop)).findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("Giỏ hàng trống"));
+    var selected = CartSelection.select(cart.getItems(), ids, CartResponse.Item::getCartItemId);
+    var productIds = selected.stream().map(CartResponse.Item::getProductId).collect(java.util.stream.Collectors.toSet());
+    var now = LocalDateTime.now();
+    return promotions.findByShopIdAndIsDeletedFalseOrderByIdDesc(shop).stream()
+        .filter(p -> !now.isBefore(p.getStartDate()) && now.isBefore(p.getEndDate()))
+        .map(p -> {
+          var applies = promotionLinks.findByPromotionIdAndIsDeletedFalse(p.getId()).stream()
+              .map(link -> link.getProduct().getId()).toList();
+          return new PromotionOffer(p.getId(), p.getName(), p.getDiscountType().name(),
+              p.getDiscountValue(), p.getStartDate(), p.getEndDate(), applies,
+              applies.stream().anyMatch(productIds::contains));
+        }).toList();
+  }
+
   public Quote quote(Long user, CreateOrderRequest r) {
     paymentAvailability.requireAvailable(r.getPaymentMethod());
     CartResponse c =
@@ -79,6 +102,11 @@ public class OrderQuoteService {
       if (products.findById(id).orElseThrow().getStock() < quantity)
         throw new IllegalArgumentException("Không đủ tồn kho cho các món đã chọn");
     });
+    var promo = pricing.selectedPromotion(r.getShopId(), r.getPromotionId(), quantities.keySet());
+    BigDecimal promotionDiscount = selected.stream().map(i -> pricing.promotionDiscount(
+        products.findById(i.getProductId()).orElseThrow(), i.getUnitPrice(), promo)
+        .multiply(BigDecimal.valueOf(i.getQuantity()))).reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal voucherBase = subtotal.subtract(promotionDiscount);
     BigDecimal discount = BigDecimal.ZERO;
     if (shippingFee.signum() < 0)
       throw new IllegalStateException("Phí giao hàng cấu hình không hợp lệ");
@@ -93,7 +121,7 @@ public class OrderQuoteService {
       if (v.getShop() != null && !v.getShop().getId().equals(r.getShopId())
           || now.isBefore(v.getStartDate())
           || !now.isBefore(v.getEndDate())
-          || subtotal.compareTo(v.getMinOrderAmount()) < 0
+          || voucherBase.compareTo(v.getMinOrderAmount()) < 0
           || v.getUsageLimit() != null && v.getUsedCount() >= v.getUsageLimit()
           || usages.countByVoucherIdAndUserId(v.getId(), user) > 0)
         throw new IllegalArgumentException("Mã giảm giá không đủ điều kiện");
@@ -105,12 +133,13 @@ public class OrderQuoteService {
       else
         discount =
             ProductPricing.discount(
-                subtotal,
+                voucherBase,
                 v.getDiscountType(),
                 v.getDiscountValue(),
                 v.getMaxDiscountAmount());
     }
     return new Quote(
-        subtotal, discount, shipping, subtotal.subtract(discount).add(shipping));
+        subtotal, discount.add(promotionDiscount), shipping,
+        subtotal.subtract(discount).subtract(promotionDiscount).add(shipping), promotionDiscount, discount);
   }
 }

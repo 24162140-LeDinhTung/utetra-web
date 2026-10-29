@@ -19,3 +19,10 @@ test('profile view loads display values without sending writes or rendering edit
  try{w.eval(profileSource);await wait(()=>w.document.querySelector('#profile-fullName').textContent==='Khách hàng');assert.equal(w.document.querySelector('#profile-phone').textContent,'Chưa cập nhật');assert.equal(w.document.querySelector('form,input'),null);assert.equal(calls.length,1);assert.equal(calls[0].method,undefined);}
  finally{w.close();}
 });
+
+test('management return links are limited to server supplied roles',async()=>{
+ for(const role of ['customer','vendor','admin']){
+  const dom=new JSDOM('<div data-account-menu data-vendor="'+(role==='vendor')+'" data-admin="'+(role==='admin')+'"></div>',{url:'https://test.example/',runScripts:'outside-only'});const w=dom.window;w.fetch=async()=>({ok:true,json:async()=>({code:200,data:{fullName:'Người thử'}})});
+  try{w.eval(menuSource);await wait(()=>w.document.querySelector('.account-name').textContent==='Người thử');const urls=[...w.document.querySelectorAll('a')].map(a=>new URL(a.href).pathname);assert.equal(urls.includes('/vendor/my-shops'),role==='vendor');assert.equal(urls.includes('/admin/dashboard'),role==='admin');}finally{w.close();}
+ }
+});

@@ -20,6 +20,7 @@ public class ProductPricing {
   private final ProductAttributeRepository attributes;
   private final ProductAttributeValueRepository values;
   private final PromotionProductRepository promotions;
+  private final PromotionRepository promotionRepository;
   private final ProductImageRepository images;
   private final ObjectMapper json = new ObjectMapper();
 
@@ -55,19 +56,29 @@ public class ProductPricing {
     }
   }
 
+  // Product/cart prices are undiscounted until checkout explicitly selects a promotion.
   public BigDecimal unitPrice(Product p, String selected) {
-    BigDecimal base = p.getPrice().add(selection(p, selected).extra());
-    BigDecimal best = BigDecimal.ZERO;
+    return p.getPrice().add(selection(p, selected).extra()).setScale(0, RoundingMode.HALF_UP);
+  }
+
+  public Promotion selectedPromotion(Long shop, Long id, Set<Long> productIds) {
+    if (id == null) return null;
+    Promotion promo = promotionRepository.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Khuyến mãi không tồn tại"));
     LocalDateTime now = LocalDateTime.now();
-    for (PromotionProduct link : promotions.findByProductIdAndIsDeletedFalse(p.getId())) {
-      Promotion promo = link.getPromotion();
-      if (!Boolean.TRUE.equals(promo.getIsDeleted())
-          && promo.getShop().getId().equals(p.getShop().getId())
-          && !now.isBefore(promo.getStartDate())
-          && now.isBefore(promo.getEndDate()))
-        best = best.max(discount(base, promo.getDiscountType(), promo.getDiscountValue(), null));
-    }
-    return base.subtract(best).setScale(0, RoundingMode.HALF_UP);
+    if (Boolean.TRUE.equals(promo.getIsDeleted()) || !promo.getShop().getId().equals(shop)
+        || now.isBefore(promo.getStartDate()) || !now.isBefore(promo.getEndDate()))
+      throw new IllegalArgumentException("Khuyến mãi không còn hiệu lực hoặc thuộc cửa hàng khác");
+    if (promotions.findByPromotionIdAndIsDeletedFalse(id).stream()
+        .noneMatch(link -> productIds.contains(link.getProduct().getId())))
+      throw new IllegalArgumentException("Khuyến mãi không áp dụng cho các món đã chọn");
+    return promo;
+  }
+
+  public BigDecimal promotionDiscount(Product p, BigDecimal price, Promotion promo) {
+    if (promo == null || promotions.findByPromotionIdAndIsDeletedFalse(promo.getId()).stream()
+        .noneMatch(link -> link.getProduct().getId().equals(p.getId()))) return BigDecimal.ZERO;
+    return discount(price, promo.getDiscountType(), promo.getDiscountValue(), null);
   }
 
   public static BigDecimal discount(

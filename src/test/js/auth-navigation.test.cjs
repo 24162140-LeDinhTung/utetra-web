@@ -7,7 +7,9 @@ const path = require('node:path');
 const jsp = fs.readFileSync(path.join(__dirname,
   '../../main/webapp/WEB-INF/decorators/main-decorator.jsp'), 'utf8');
 const script = jsp.match(/<script>\s*([\s\S]*?)<\/script>/)[1]
-  .replaceAll('${pageContext.request.contextPath}', '/utetra');
+  .replaceAll('${pageContext.request.contextPath}', '/utetra')
+  .replaceAll("${pageContext.request.isUserInRole('ROLE_VENDOR')}", 'false')
+  .replaceAll("${pageContext.request.isUserInRole('ROLE_ADMIN')}", 'false');
 function browser(token) {
   const stored = new Map([['accessToken', token], ['userRoles', '["ROLE_CUSTOMER"]']]);
   const buttons = { innerHTML: 'Đăng nhập' };

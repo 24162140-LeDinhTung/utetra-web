@@ -81,7 +81,7 @@
         if (token) {
             // Nếu có token, hiện menu tài khoản; module dùng chung tải tên và avatar
             document.getElementById('auth-buttons').innerHTML = `
-                <div data-account-menu><a href="${pageContext.request.contextPath}/customer/profile">Thông tin tài khoản</a></div>
+                <div data-account-menu data-vendor="${pageContext.request.isUserInRole('ROLE_VENDOR')}" data-admin="${pageContext.request.isUserInRole('ROLE_ADMIN')}"><a href="${pageContext.request.contextPath}/customer/profile">Thông tin tài khoản</a></div>
             `;
         }
 
@@ -102,6 +102,6 @@
     <sitemesh:write property='script'/>
     <script src="${pageContext.request.contextPath}/js/customer-ui.js" defer></script>
     <script src="${pageContext.request.contextPath}/js/product-images.js" defer></script>
-    <script src="${pageContext.request.contextPath}/js/account-menu.js" data-context="${pageContext.request.contextPath}" defer></script>
+    <script src="${pageContext.request.contextPath}/js/account-menu.js?v=20261029-2" data-context="${pageContext.request.contextPath}" defer></script>
 </body>
 </html>

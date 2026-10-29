@@ -35,6 +35,7 @@
                             </c:choose>
                         </td>
                         <td class="text-end pe-4">
+                            <a class="btn btn-sm btn-outline-primary" href="${pageContext.request.contextPath}/admin/users/shops/${shop.id}">Xem chi tiết</a>
                             <form action="${pageContext.request.contextPath}/admin/shops/update-status" method="post" style="display:inline;">
                                 <input type="hidden" name="shopId" value="${shop.id}">
                                 <input type="hidden" name="status" value="ACTIVE">

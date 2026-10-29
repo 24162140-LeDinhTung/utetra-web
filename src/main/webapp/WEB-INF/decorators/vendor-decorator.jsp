@@ -24,7 +24,7 @@
         <div class="management-header-trail"><span>WORKSPACE</span><p class="management-current-section">KHÔNG GIAN CỬA HÀNG</p></div>
         <div class="management-header-actions ms-auto d-flex align-items-center">
             <a class="management-storefront-link" href="${pageContext.request.contextPath}/">Xem website <i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
-            <div data-account-menu><a href="${pageContext.request.contextPath}/customer/profile">Thông tin tài khoản</a></div>
+            <div data-account-menu data-vendor="${pageContext.request.isUserInRole('ROLE_VENDOR')}" data-admin="${pageContext.request.isUserInRole('ROLE_ADMIN')}"><a href="${pageContext.request.contextPath}/customer/profile">Thông tin tài khoản</a></div>
         </div>
     </nav>
     <aside class="sidebar offcanvas-lg offcanvas-start" id="management-sidebar" tabindex="-1" aria-labelledby="management-sidebar-title" data-context="${pageContext.request.contextPath}">
@@ -53,6 +53,6 @@
     </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/js/management-ui.js" defer></script>
-    <script src="${pageContext.request.contextPath}/js/account-menu.js" data-context="${pageContext.request.contextPath}" defer></script>
+    <script src="${pageContext.request.contextPath}/js/account-menu.js?v=20261029-2" data-context="${pageContext.request.contextPath}" defer></script>
 </body>
 </html>

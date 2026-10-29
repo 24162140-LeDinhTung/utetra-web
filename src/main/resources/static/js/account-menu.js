@@ -15,7 +15,10 @@
     const email=document.createElement('p');email.className='account-email';
     const profile=document.createElement('a');profile.href=base+'/customer/profile';profile.textContent='Thông tin tài khoản';
     const logout=document.createElement('button');logout.type='button';logout.textContent='Đăng xuất';logout.addEventListener('click',()=>{clearLogin();location.href=base+'/auth/login';});
-    dropdown.append(email,profile,logout);menu.append(trigger,dropdown);host.replaceChildren(menu);
+    dropdown.append(email,profile);
+    if(host.dataset.vendor==='true'){const back=document.createElement('a');back.href=base+'/vendor/my-shops';back.textContent='Về quản lý cửa hàng';dropdown.append(back);}
+    if(host.dataset.admin==='true'){const back=document.createElement('a');back.href=base+'/admin/dashboard';back.textContent='Về trang quản trị';dropdown.append(back);}
+    dropdown.append(logout);menu.append(trigger,dropdown);host.replaceChildren(menu);
     document.addEventListener('click',e=>{if(!menu.contains(e.target))menu.open=false;});
     menu.addEventListener('keydown',e=>{if(e.key==='Escape'){menu.open=false;trigger.focus();}});
     const render=user=>{name.textContent=user.fullName||user.email||'Tài khoản';email.textContent=user.email||'';avatar.src=safeAvatar(user.avatarUrl);};

@@ -12,6 +12,9 @@ public class CreateOrderRequest {
 
   @NotNull private Long shopId;
 
+  @jakarta.validation.constraints.Positive
+  private Long promotionId;
+
   @jakarta.validation.constraints.Size(min = 1, max = 500)
   private java.util.List<@NotNull @jakarta.validation.constraints.Positive Long> cartItemIds;
 

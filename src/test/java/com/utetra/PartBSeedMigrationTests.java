@@ -46,6 +46,8 @@ class PartBSeedMigrationTests {
       assertThat(scalar(c, "SELECT COUNT(*) FROM wallets WHERE balance < 0")).isZero();
       run(c, "V7__link_wallet_income_to_order.sql");
       run(c, "V8__vnpay_hosted_qr.sql");
+      run(c, "V9__sepay_receipts.sql");
+      assertThat(scalar(c, "SELECT COUNT(*) FROM sepay_receipts")).isZero();
       assertThat(scalar(c, "SELECT COUNT(*) FROM wallet_transactions WHERE order_id IS NOT NULL")).isZero();
       if (existing) {
         assertThat(scalar(c, "SELECT COUNT(*) FROM users WHERE id=800 AND password='unchanged'")).isEqualTo(1);

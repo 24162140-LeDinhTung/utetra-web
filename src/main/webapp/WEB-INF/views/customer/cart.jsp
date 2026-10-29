@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
 <html lang="vi"><head><title>Giỏ hàng · UTETra</title>
-<link rel="stylesheet" href="${pageContext.request.contextPath}/css/commerce.css"></head>
+<link rel="stylesheet" href="${pageContext.request.contextPath}/css/commerce.css?v=20261029-2"></head>
 <body>
 <div class="customer-page-intro customer-page-intro--compact">
     <p class="customer-eyebrow">MỘT CHÚT NGỌT NGÀO CHO HÔM NAY</p>
@@ -13,5 +13,5 @@
 <div class="customer-commerce" id="commerce" data-page="cart" data-context="${pageContext.request.contextPath}">
 <div id="notice" role="status" aria-live="polite"></div>
 <div id="commerce-content"><p>Đang tải dữ liệu…</p></div></div>
-<script src="${pageContext.request.contextPath}/js/commerce.js" defer></script>
+<script src="${pageContext.request.contextPath}/js/commerce.js?v=20261029-4" defer></script>
 </body></html>

@@ -30,6 +30,76 @@ public class PaymentServiceImpl implements PaymentService {
   private final CommerceAccess access;
   private final ApplicationEventPublisher events;
   private final OrderWalletSettlement settlement;
+  private final SepayReceiptRepository sepayReceipts;
+  private final org.springframework.core.env.Environment environment;
+
+  private String sepay(String key) { return environment.getProperty("payment.sepay." + key, "").trim(); }
+
+  public Map<String, String> startSepay(Long userId, Long orderId) {
+    configured(sepay("account-number"), sepay("bank"), sepay("account-name"), sepay("webhook-key"));
+    Order order = orders.lockById(orderId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn"));
+    access.order(order, userId);
+    if (order.getPaymentMethod() != PaymentMethod.SEPAY || order.getStatus() != OrderStatus.NEW
+        || order.getPaymentStatus() != PaymentStatus.PENDING || order.getTotalAmount().signum() <= 0)
+      throw new IllegalArgumentException("Đơn không còn chờ chuyển khoản SePay");
+    PaymentTransaction tx = transactions.findFirstByOrderIdOrderByIdDesc(orderId)
+        .filter(t -> t.getProvider() == PaymentMethod.SEPAY && t.getStatus() == PaymentStatus.PENDING
+            && t.getQrContent() != null && t.getPaymentUrl() != null)
+        .orElseGet(() -> {
+          PaymentTransaction n = new PaymentTransaction(); n.setOrder(order);
+          n.setProvider(PaymentMethod.SEPAY); n.setAmount(order.getTotalAmount());
+          n.setReference("SP" + UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT));
+          n.setQrContent(sepay("account-number"));
+          n.setPaymentUrl("https://vietqr.app/img?acc=" + encode(sepay("account-number"))
+              + "&bank=" + encode(sepay("bank")) + "&amount=" + n.getAmount().toBigIntegerExact()
+              + "&des=" + encode(n.getReference()));
+          return transactions.save(n);
+        });
+    if (!sepay("account-number").equals(tx.getQrContent()))
+      throw new IllegalStateException("Tài khoản nhận đã thay đổi. Vui lòng liên hệ cửa hàng trước khi thanh toán.");
+    return Map.of("qrImage", tx.getPaymentUrl(), "reference", tx.getReference(),
+        "accountNumber", tx.getQrContent(), "bank", sepay("bank"), "accountName", sepay("account-name"),
+        "amount", tx.getAmount().toPlainString(), "environment", "live");
+  }
+
+  private String encode(String value) {
+    return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
+  }
+
+  public void sepayCallback(String authorization, Map<String, Object> p) {
+    String key = sepay("webhook-key");
+    if (key.isBlank() || authorization == null || !java.security.MessageDigest.isEqual(
+        ("Apikey " + key).getBytes(java.nio.charset.StandardCharsets.UTF_8),
+        authorization.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+      throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED);
+    // Unrelated bank movements are acknowledged without changing any order.
+    if (!"in".equals(p.get("transferType")) || !sepay("account-number").equals(p.get("accountNumber"))
+        || !sepay("bank").equalsIgnoreCase(Objects.toString(p.get("gateway"), ""))) return;
+    long eventId;
+    BigDecimal amount;
+    try {
+      eventId = new BigDecimal(Objects.toString(p.get("id"), "")).longValueExact();
+      amount = new BigDecimal(Objects.toString(p.get("transferAmount"), ""));
+      if (eventId <= 0 || amount.signum() <= 0) return;
+    } catch (NumberFormatException | ArithmeticException e) { return; }
+    var matcher = java.util.regex.Pattern.compile("(?i)(?<![A-Z0-9])SP[0-9A-F]{32}(?![A-Z0-9])")
+        .matcher(Objects.toString(p.get("content"), ""));
+    if (!matcher.find()) return;
+    String reference = matcher.group().toUpperCase(Locale.ROOT);
+    if (matcher.find()) return; // Never guess between two order references.
+    PaymentTransaction tx = transactions.findByReference(reference).orElse(null);
+    if (tx == null || tx.getProvider() != PaymentMethod.SEPAY) return;
+    Order order = orders.lockById(tx.getOrder().getId()).orElseThrow();
+    entityManager.refresh(tx);
+    if (sepayReceipts.existsById(eventId)) return;
+    if (!Objects.equals(tx.getQrContent(), p.get("accountNumber"))
+        || tx.getAmount().compareTo(amount) != 0 || order.getTotalAmount().compareTo(amount) != 0) return;
+    SepayReceipt receipt = new SepayReceipt(); receipt.setId(eventId); receipt.setPaymentReference(reference);
+    sepayReceipts.saveAndFlush(receipt);
+    if (tx.getStatus() != PaymentStatus.PENDING || order.getPaymentStatus() == PaymentStatus.SUCCESS) return;
+    complete(tx, order, true, Long.toString(eventId), "00");
+  }
+
 
   @Value("${payment.vnpay.tmn-code:}")
   private String tmn;
@@ -64,6 +134,7 @@ public class PaymentServiceImpl implements PaymentService {
   }
 
   public Map<String, String> start(Long userId, Long orderId, PaymentMethod method, String ip) {
+    if (method == PaymentMethod.SEPAY) return startSepay(userId, orderId);
     if (method == PaymentMethod.COD)
       throw new IllegalArgumentException("Đơn COD thanh toán khi nhận hàng");
     Order o =

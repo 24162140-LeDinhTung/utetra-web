@@ -65,6 +65,58 @@ class CommerceIntegrationTests {
   Category category, category2;
   Product product;
 
+  @Test
+  void sepayAuthenticatesMatchesBankAmountAndCreditsOnlyOnce() throws Exception {
+    environment.getPropertySources().addFirst(new org.springframework.core.env.MapPropertySource("sepay-test", Map.of(
+        "payment.sepay.bank", "TPBank", "payment.sepay.account-number", "0123456789",
+        "payment.sepay.account-name", "TEST OWNER", "payment.sepay.webhook-key", "test-webhook-secret")));
+    try {
+      var order = buy(PaymentMethod.SEPAY);
+      assertThatThrownBy(() -> payments.startSepay(other.getId(), order.getId())).isInstanceOf(AccessDeniedException.class);
+      var qr = payments.startSepay(customer.getId(), order.getId());
+      assertThat(qr.get("qrImage")).contains("https://vietqr.app/img?", "amount=75000", "acc=0123456789");
+      assertThat(payments.startSepay(customer.getId(), order.getId()).get("reference")).isEqualTo(qr.get("reference"));
+      Map<String,Object> payload = new HashMap<>(Map.of("id", 87654321L, "gateway", "TPBank",
+          "accountNumber", "0123456789", "transferType", "in", "transferAmount", 75000,
+          "content", "Thanh toan " + qr.get("reference")));
+      assertThatThrownBy(() -> payments.sepayCallback(null, payload)).isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+      String auth = "Apikey test-webhook-secret";
+      for (var bad : List.of(Map.entry("accountNumber", (Object)"999"), Map.entry("gateway", (Object)"OtherBank"),
+          Map.entry("transferType", (Object)"out"), Map.entry("transferAmount", (Object)1),
+          Map.entry("content", (Object)"not an order"), Map.entry("id", (Object)0))) {
+        var invalid = new HashMap<>(payload); invalid.put(bad.getKey(), bad.getValue()); payments.sepayCallback(auth, invalid);
+        assertThat(orderRepo.findById(order.getId()).orElseThrow().getPaymentStatus()).isEqualTo(PaymentStatus.PENDING);
+      }
+      var http = HttpClient.newHttpClient();
+      String body = "{\"id\":87654321,\"gateway\":\"TPBank\",\"accountNumber\":\"0123456789\",\"transferType\":\"in\",\"transferAmount\":75000,\"content\":\"" + qr.get("reference") + "\"}";
+      var req = HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/payment/sepay/webhook"))
+          .header("Content-Type", "application/json").header("Authorization", auth).POST(HttpRequest.BodyPublishers.ofString(body)).build();
+      var unauthorized = HttpRequest.newBuilder(req.uri()).header("Content-Type", "application/json")
+          .header("Authorization", "Apikey wrong").POST(HttpRequest.BodyPublishers.ofString(body)).build();
+      assertThat(http.send(unauthorized, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(401);
+      var firstDelivery = http.sendAsync(req, HttpResponse.BodyHandlers.ofString());
+      var concurrentDelivery = http.sendAsync(req, HttpResponse.BodyHandlers.ofString());
+      var response = firstDelivery.get(15, TimeUnit.SECONDS);
+      assertThat(concurrentDelivery.get(15, TimeUnit.SECONDS).statusCode()).isEqualTo(200);
+      assertThat(response.statusCode()).isEqualTo(200); assertThat(response.body()).contains("true");
+      payments.sepayCallback(auth, payload);
+      payload.put("id", 87654322L); payments.sepayCallback(auth, payload);
+      assertThat(orderRepo.findById(order.getId()).orElseThrow().getPaymentStatus()).isEqualTo(PaymentStatus.SUCCESS);
+      assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
+      assertThat(walletLedger.findByOrderIdAndType(order.getId(), WalletTxType.ORDER_INCOME)).isPresent();
+      assertThatThrownBy(() -> payments.startSepay(customer.getId(), order.getId())).isInstanceOf(IllegalArgumentException.class);
+      // Reusing a bank event for another order must never settle that order.
+      var second = buy(PaymentMethod.SEPAY); var qr2 = payments.startSepay(customer.getId(), second.getId());
+      payload.put("content", qr2.get("reference")); payments.sepayCallback(auth, payload);
+      assertThat(orderRepo.findById(second.getId()).orElseThrow().getPaymentStatus()).isEqualTo(PaymentStatus.PENDING);
+      var cancel = new CancelOrderRequest(); cancel.setReason("Cancel before bank arrives");
+      orders.cancelOrder(customer.getId(), second.getId(), cancel);
+      payload.put("id", 87654323L); payments.sepayCallback(auth, payload);
+      assertThat(orderRepo.findById(second.getId()).orElseThrow().getStatus()).isEqualTo(OrderStatus.CANCELLED);
+      assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
+    } finally { environment.getPropertySources().remove("sepay-test"); }
+  }
+
   @BeforeEach
   void data() {
     customer = user(RoleName.ROLE_CUSTOMER);
@@ -386,7 +438,7 @@ class CommerceIntegrationTests {
   }
 
   @Test
-  void promotionChangesServerPriceOnlyForItsProducts() {
+  void promotionRequiresExplicitSelectionAndOrderMatchesQuote() {
     CreatePromotionRequest r = new CreatePromotionRequest();
     r.setName("Giảm 10%");
     r.setPromotionType(PromotionType.PERCENT);
@@ -395,10 +447,20 @@ class CommerceIntegrationTests {
     r.setStartDate(LocalDateTime.now().minusHours(1));
     r.setEndDate(LocalDateTime.now().plusDays(1));
     r.setProductIds(List.of(product.getId()));
-    promotions.save(shop.getId(), owner.getId(), null, r);
+    var promo=promotions.save(shop.getId(), owner.getId(), null, r);
     add(customer, product, 1, "{}");
-    assertThat(carts.getCart(customer.getId()).getFirst().getSubtotal())
-        .isEqualByComparingTo("27000");
+    assertThat(carts.getCart(customer.getId()).getFirst().getSubtotal()).isEqualByComparingTo("30000");
+    var orderRequest=request(shop,PaymentMethod.COD);
+    assertThat(quotes.quote(customer.getId(),orderRequest).totalAmount()).isEqualByComparingTo("45000");
+    orderRequest.setPromotionId(promo.id());
+    var quote=quotes.quote(customer.getId(),orderRequest);
+    assertThat(quote.subtotal()).isEqualByComparingTo("30000");
+    assertThat(quote.promotionDiscountAmount()).isEqualByComparingTo("3000");
+    orderRequest.setExpectedTotalAmount(quote.totalAmount());
+    var order=orders.createOrder(customer.getId(),orderRequest);
+    assertThat(order.getTotalAmount()).isEqualByComparingTo("42000");
+    assertThat(order.getDiscountAmount()).isEqualByComparingTo("3000");
+    assertThat(order.getItems().getFirst().getUnitPrice()).isEqualByComparingTo("30000");
   }
 
   @Test
@@ -946,5 +1008,68 @@ class CommerceIntegrationTests {
         .doesNotContain("id=\"profileForm\"", "id=\"avatarForm\"");
     assertThat(edit.body()).contains("id=\"profileForm\"", "id=\"avatarForm\"");
     assertThat(get("/customer/profile/edit",null).statusCode()).isEqualTo(302);
+  }
+
+  @Test
+  void managementDetailsRespectRolesAndShopOwnership() throws Exception {
+    String vendorToken=jwt.generateAccessToken(owner.getId(),owner.getEmail());
+    var own=get("/vendor/my-shops/"+shop.getId(),vendorToken);
+    assertThat(own.statusCode()).isEqualTo(200);
+    assertThat(own.body()).contains("Chi tiết cửa hàng").doesNotContain("/vendor/my-shops/save");
+    User stranger=user(RoleName.ROLE_VENDOR);
+    assertThat(get("/vendor/my-shops/"+shop.getId(),jwt.generateAccessToken(stranger.getId(),stranger.getEmail())).statusCode()).isEqualTo(403);
+    User admin=user(RoleName.ROLE_ADMIN);String adminToken=jwt.generateAccessToken(admin.getId(),admin.getEmail());
+    assertThat(get("/admin/users/shops/"+shop.getId(),adminToken).statusCode()).isEqualTo(200);
+    var detail=get("/api/admin/catalog/products/"+product.getId(),adminToken);
+    assertThat(detail.statusCode()).isEqualTo(200);assertThat(detail.body()).contains(product.getName());
+    assertThat(get("/api/admin/catalog/products/"+product.getId(),vendorToken).statusCode()).isEqualTo(403);
+    assertThat(get("/",vendorToken).body()).contains("data-vendor=\"true\"");
+    assertThat(get("/",jwt.generateAccessToken(customer.getId(),customer.getEmail())).body()).contains("data-vendor=\"false\"", "data-admin=\"false\"");
+  }
+
+  CreatePromotionRequest promotionRequest(Product p) {
+    var r=new CreatePromotionRequest();r.setName("khuyenmai"+System.nanoTime());
+    r.setPromotionType(PromotionType.PERCENT);r.setDiscountType(DiscountType.PERCENT);r.setDiscountValue(BigDecimal.TEN);
+    r.setStartDate(LocalDateTime.now().minusHours(1));r.setEndDate(LocalDateTime.now().plusDays(1));r.setProductIds(List.of(p.getId()));return r;
+  }
+
+  @Test
+  void promotionListAndValidationRejectForeignDeletedExpiredAndInapplicableSelections() {
+    add(customer,product,1,"{}");
+    var r=promotionRequest(product);var promo=promotions.save(shop.getId(),owner.getId(),null,r);
+    String code="VOUCHER"+System.nanoTime();vouchers.save(shop.getId(),owner.getId(),null,voucher(code,VoucherType.PRODUCT));
+    assertThat(quotes.promotions(customer.getId(),shop.getId(),null)).hasSize(1).allMatch(o->o.name().equals(r.getName())&&o.eligible());
+    Product p2=product(shop2,category,"B",5);var foreign=promotions.save(shop2.getId(),owner.getId(),null,promotionRequest(p2));
+    Product p3=product(shop,category,"Không chọn",5);var unrelated=promotions.save(shop.getId(),owner.getId(),null,promotionRequest(p3));
+    var order=request(shop,PaymentMethod.COD);
+    for(Long id:List.of(foreign.id(),unrelated.id(),Long.MAX_VALUE)){
+      order.setPromotionId(id);assertThatThrownBy(()->quotes.quote(customer.getId(),order)).isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(()->orders.createOrder(customer.getId(),order)).isInstanceOf(IllegalArgumentException.class);
+    }
+    order.setPromotionId(promo.id());var oldTotal=quotes.quote(customer.getId(),order).totalAmount();order.setExpectedTotalAmount(oldTotal);
+    r.setDiscountValue(new BigDecimal("20"));promotions.save(shop.getId(),owner.getId(),promo.id(),r);
+    assertThatThrownBy(()->orders.createOrder(customer.getId(),order)).isInstanceOf(IllegalArgumentException.class);
+    r.setEndDate(LocalDateTime.now().minusMinutes(1));promotions.save(shop.getId(),owner.getId(),promo.id(),r);
+    assertThat(quotes.promotions(customer.getId(),shop.getId(),null)).noneMatch(o->o.id().equals(promo.id()));
+    assertThatThrownBy(()->quotes.quote(customer.getId(),order)).isInstanceOf(IllegalArgumentException.class);
+    r.setEndDate(LocalDateTime.now().plusDays(1));promotions.save(shop.getId(),owner.getId(),promo.id(),r);promotions.delete(shop.getId(),owner.getId(),promo.id());
+    assertThatThrownBy(()->orders.createOrder(customer.getId(),order)).isInstanceOf(IllegalArgumentException.class);
+    assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(20);
+  }
+
+  @Test
+  void selectedPromotionOnlyDiscountsLinkedTickedLinesAndVoucherAppliesAfterIt() {
+    Product p2=product(shop,category,"Món khác",20);add(customer,product,2,"{}");add(customer,p2,1,"{}");
+    var promo=promotions.save(shop.getId(),owner.getId(),null,promotionRequest(product));
+    var order=request(shop,PaymentMethod.COD);order.setPromotionId(promo.id());
+    String code="STACK"+System.nanoTime();var voucher=voucher(code,VoucherType.PRODUCT);voucher.setDiscountType(DiscountType.PERCENT);voucher.setDiscountValue(BigDecimal.TEN);voucher.setMinOrderAmount(new BigDecimal("80000"));
+    vouchers.save(shop.getId(),owner.getId(),null,voucher);order.setVoucherCode(code);
+    var quote=quotes.quote(customer.getId(),order);assertThat(quote.subtotal()).isEqualByComparingTo("90000");
+    assertThat(quote.promotionDiscountAmount()).isEqualByComparingTo("6000");assertThat(quote.voucherDiscountAmount()).isEqualByComparingTo("8400");
+    order.setExpectedTotalAmount(quote.totalAmount());assertThat(orders.createOrder(customer.getId(),order).getTotalAmount()).isEqualByComparingTo("90600");
+    add(customer,product,1,"{}");add(customer,p2,1,"{}");var selected=carts.getCart(customer.getId()).getFirst().getItems().stream().filter(x->x.getProductId().equals(p2.getId())).findFirst().orElseThrow();
+    order.setCartItemIds(List.of(selected.getCartItemId()));order.setVoucherCode(null);order.setExpectedTotalAmount(null);
+    assertThat(quotes.promotions(customer.getId(),shop.getId(),order.getCartItemIds())).anyMatch(o->o.id().equals(promo.id())&&!o.eligible());
+    assertThatThrownBy(()->quotes.quote(customer.getId(),order)).isInstanceOf(IllegalArgumentException.class);
   }
 }

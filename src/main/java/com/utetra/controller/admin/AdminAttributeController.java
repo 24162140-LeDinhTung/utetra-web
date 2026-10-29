@@ -62,6 +62,19 @@ public class AdminAttributeController {
                     Boolean.TRUE.equals(p.getIsDeleted())));
   }
 
+  @GetMapping("/api/admin/catalog/products/{id}")
+  @Transactional(readOnly = true)
+  public Map<String, Object> detail(@PathVariable Long id) {
+    var p = products.findById(id).orElseThrow(() ->
+        new com.utetra.exception.custom.ResourceNotFoundException("Không tìm thấy sản phẩm"));
+    Map<String, Object> r = new LinkedHashMap<>();
+    r.put("id", p.getId());r.put("name", p.getName());r.put("description", p.getDescription());
+    r.put("shopName", p.getShop().getName());r.put("categoryName", p.getCategory().getName());
+    r.put("price", p.getPrice());r.put("stock", p.getStock());r.put("soldCount", p.getSoldCount());
+    r.put("status", p.getStatus().name());r.put("isDeleted", Boolean.TRUE.equals(p.getIsDeleted()));
+    return r;
+  }
+
   @PatchMapping("/api/admin/catalog/products/{id}/status")
   public void moderate(@PathVariable Long id, @RequestParam ProductStatus status) {
     catalog.moderate(id, status);
