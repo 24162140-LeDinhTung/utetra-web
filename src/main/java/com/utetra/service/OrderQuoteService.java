@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class OrderQuoteService {
   private final CartService carts;
+  private final ProductRepository products;
   private final VoucherRepository vouchers;
   private final VoucherUsageRepository usages;
   private final PaymentAvailability paymentAvailability;
@@ -36,6 +37,10 @@ public class OrderQuoteService {
       BigDecimal minimum, BigDecimal maximum, java.time.LocalDateTime endsAt, boolean eligible) {}
 
   public java.util.List<Offer> offers(Long user, Long shop) {
+    return offers(user, shop, null);
+  }
+
+  public java.util.List<Offer> offers(Long user, Long shop, java.util.List<Long> cartItemIds) {
     var now = LocalDateTime.now();
     return vouchers.findByShopIdAndIsDeletedFalseOrderByIdDesc(shop).stream()
         .filter(v -> !now.isBefore(v.getStartDate()) && now.isBefore(v.getEndDate()))
@@ -45,6 +50,7 @@ public class OrderQuoteService {
           var request = new CreateOrderRequest();
           request.setShopId(shop); request.setPaymentMethod(com.utetra.enums.PaymentMethod.COD);
           request.setVoucherCode(v.getCode());
+          request.setCartItemIds(cartItemIds);
           boolean eligible;
           try { quote(user, request); eligible = true; }
           catch (IllegalArgumentException e) { eligible = false; }
@@ -60,9 +66,19 @@ public class OrderQuoteService {
             .filter(x -> x.getShopId().equals(r.getShopId()))
             .findFirst()
             .orElseThrow(() -> new IllegalArgumentException("Giỏ hàng trống"));
-    if (c.getItems().stream().anyMatch(i -> i.getUnavailableReason() != null))
+    var selected = CartSelection.select(c.getItems(), r.getCartItemIds(), CartResponse.Item::getCartItemId);
+    if (selected.isEmpty()) throw new IllegalArgumentException("Giỏ hàng trống");
+    BigDecimal subtotal = selected.stream().map(CartResponse.Item::getLineTotal)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+    if (selected.stream().anyMatch(i -> i.getUnavailableReason() != null))
       throw new IllegalArgumentException(
           "Giỏ hàng có món không còn hợp lệ. Hãy cập nhật hoặc xóa món trước.");
+    var quantities = new java.util.HashMap<Long, Integer>();
+    selected.forEach(i -> quantities.merge(i.getProductId(), i.getQuantity(), Math::addExact));
+    quantities.forEach((id, quantity) -> {
+      if (products.findById(id).orElseThrow().getStock() < quantity)
+        throw new IllegalArgumentException("Không đủ tồn kho cho các món đã chọn");
+    });
     BigDecimal discount = BigDecimal.ZERO;
     if (shippingFee.signum() < 0)
       throw new IllegalStateException("Phí giao hàng cấu hình không hợp lệ");
@@ -77,7 +93,7 @@ public class OrderQuoteService {
       if (v.getShop() != null && !v.getShop().getId().equals(r.getShopId())
           || now.isBefore(v.getStartDate())
           || !now.isBefore(v.getEndDate())
-          || c.getSubtotal().compareTo(v.getMinOrderAmount()) < 0
+          || subtotal.compareTo(v.getMinOrderAmount()) < 0
           || v.getUsageLimit() != null && v.getUsedCount() >= v.getUsageLimit()
           || usages.countByVoucherIdAndUserId(v.getId(), user) > 0)
         throw new IllegalArgumentException("Mã giảm giá không đủ điều kiện");
@@ -89,12 +105,12 @@ public class OrderQuoteService {
       else
         discount =
             ProductPricing.discount(
-                c.getSubtotal(),
+                subtotal,
                 v.getDiscountType(),
                 v.getDiscountValue(),
                 v.getMaxDiscountAmount());
     }
     return new Quote(
-        c.getSubtotal(), discount, shipping, c.getSubtotal().subtract(discount).add(shipping));
+        subtotal, discount, shipping, subtotal.subtract(discount).add(shipping));
   }
 }

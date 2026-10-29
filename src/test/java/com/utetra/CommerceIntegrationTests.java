@@ -402,7 +402,7 @@ class CommerceIntegrationTests {
   }
 
   @Test
-  void reviewRequiresDeliveredPurchaseAndMedia() {
+  void reviewRequiresDeliveredPurchaseAndAcceptsOptionalMedia() {
     var o = buy(PaymentMethod.COD);
     CreateReviewRequest r = new CreateReviewRequest();
     r.setOrderId(o.getId());
@@ -518,7 +518,7 @@ class CommerceIntegrationTests {
       var response = get(path, path.startsWith("/customer/") || path.startsWith("/vendor/")
           || path.startsWith("/admin/") ? adminToken : null);
       assertThat(response.statusCode()).as(path + " " + response.body()).isEqualTo(200);
-      assertThat(response.body()).contains(path.equals("/") ? "Xem Menu Cửa Hàng" : "id=\"commerce\"");
+      assertThat(response.body()).contains(path.equals("/") ? "storefront-shops" : "id=\"commerce\"");
     }
     assertThat(get("/js/commerce.js", null).statusCode()).isEqualTo(200);
   }
@@ -841,5 +841,110 @@ class CommerceIntegrationTests {
       assertThat(orders.getDetail(customer.getId(),order.getId()).getPaymentStatus()).isEqualTo("PENDING");
       assertThat(transactions.findFirstByOrderIdOrderByIdDesc(order.getId()).orElseThrow().getQrContent()).isNull();
     } finally { org.springframework.test.util.ReflectionTestUtils.setField(implementation,"vnpUrl",previous);server.stop(0); }
+  }
+
+  @Test
+  void reviewAllowsStarsOnlyAndStillChecksPurchaseAndDuplicate() {
+    var o = buy(PaymentMethod.COD);
+    var request = new CreateReviewRequest();request.setOrderId(o.getId());request.setProductId(product.getId());request.setRating(4);
+    assertThatThrownBy(() -> reviews.create(customer.getId(),request)).isInstanceOf(IllegalArgumentException.class);
+    advance(o.getId(),OrderStatus.PICKED_UP);advance(o.getId(),OrderStatus.SHIPPING);advance(o.getId(),OrderStatus.DELIVERED);
+    assertThatThrownBy(() -> reviews.create(other.getId(),request)).isInstanceOf(AccessDeniedException.class);
+    var review = reviews.create(customer.getId(),request);
+    assertThat(review.getComment()).isEmpty();assertThat(review.getMediaUrls()).isEmpty();
+    assertThatThrownBy(() -> reviews.create(customer.getId(),request)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void reviewApiAcceptsShortCommentWithoutImageAndRejectsOversizedInput() throws Exception {
+    var o=buy(PaymentMethod.COD);advance(o.getId(),OrderStatus.PICKED_UP);advance(o.getId(),OrderStatus.SHIPPING);advance(o.getId(),OrderStatus.DELIVERED);
+    String token=jwt.generateAccessToken(customer.getId(),customer.getEmail());
+    String prefix="{\"orderId\":"+o.getId()+",\"productId\":"+product.getId()+",\"rating\":5,\"mediaUrls\":[],\"comment\":\"";
+    var http=HttpClient.newHttpClient();
+    var invalid=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/customer/reviews")).header("Authorization","Bearer "+token).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(prefix+"a".repeat(5001)+"\"}")).build();
+    assertThat(http.send(invalid,HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(400);
+    var valid=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/customer/reviews")).header("Authorization","Bearer "+token).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(prefix+"Ngon\"}")).build();
+    var response=http.send(valid,HttpResponse.BodyHandlers.ofString());
+    assertThat(response.statusCode()).as(response.body()).isEqualTo(200);assertThat(response.body()).contains("Ngon");
+  }
+
+  @Test
+  void adminDashboardRendersMonthlyRevenueWithNewTheme() throws Exception {
+    var order=buy(PaymentMethod.COD);advance(order.getId(),OrderStatus.PICKED_UP);advance(order.getId(),OrderStatus.SHIPPING);advance(order.getId(),OrderStatus.DELIVERED);
+    var admin=user(RoleName.ROLE_ADMIN);
+    var response=get("/admin/dashboard",jwt.generateAccessToken(admin.getId(),admin.getEmail()));
+    assertThat(response.statusCode()).as(response.body()).isEqualTo(200);
+    assertThat(response.body()).contains("management-admin", "management-ui.css");
+  }
+
+  @Test
+  void selectedCheckoutQuotesAndBuysOnlyTickedLinesAndKeepsOthers() {
+    Product kept = product(shop, category, "Món để dành", 20);
+    Product differentShop = product(shop2, category, "Món cửa hàng B", 20);
+    add(customer, product, 1, "{}"); add(customer, kept, 2, "{}");
+    add(customer, differentShop, 1, "{}");
+    var selected = carts.getCart(customer.getId()).stream().filter(c -> c.getShopId().equals(shop.getId()))
+        .findFirst().orElseThrow().getItems().stream().filter(i -> i.getProductId().equals(product.getId())).findFirst().orElseThrow();
+    var r = request(shop, PaymentMethod.COD); r.setCartItemIds(List.of(selected.getCartItemId()));
+    assertThat(quotes.quote(customer.getId(), r).subtotal()).isEqualByComparingTo("30000");
+    r.setExpectedTotalAmount(new BigDecimal("45000"));
+    var order = orders.createOrder(customer.getId(), r);
+    assertThat(order.getItems()).hasSize(1);
+    assertThat(order.getItems().getFirst().getProductId()).isEqualTo(product.getId());
+    assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(19);
+    assertThat(products.findById(kept.getId()).orElseThrow().getStock()).isEqualTo(20);
+    assertThat(carts.getCart(customer.getId())).hasSize(2);
+    assertThat(carts.getCart(customer.getId()).stream().flatMap(c -> c.getItems().stream()).map(i -> i.getProductId()))
+        .containsExactlyInAnyOrder(kept.getId(), differentShop.getId());
+    assertThatThrownBy(() -> orders.createOrder(customer.getId(), r)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void selectedCheckoutRejectsForeignCrossShopStaleEmptyAndDuplicateIds() {
+    Product second = product(shop2, category, "B", 20);
+    add(customer, product, 1, "{}"); add(customer, second, 1, "{}"); add(other, product, 1, "{}");
+    Long own = carts.getCart(customer.getId()).stream().filter(c -> c.getShopId().equals(shop.getId())).findFirst().orElseThrow().getItems().getFirst().getCartItemId();
+    Long crossShop = carts.getCart(customer.getId()).stream().filter(c -> c.getShopId().equals(shop2.getId())).findFirst().orElseThrow().getItems().getFirst().getCartItemId();
+    Long foreign = carts.getCart(other.getId()).getFirst().getItems().getFirst().getCartItemId();
+    for (List<Long> ids : List.of(List.<Long>of(), List.of(own, own), List.of(crossShop), List.of(foreign), List.of(Long.MAX_VALUE))) {
+      var r = request(shop, PaymentMethod.COD);r.setCartItemIds(ids);
+      assertThatThrownBy(() -> quotes.quote(customer.getId(), r)).isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> orders.createOrder(customer.getId(), r)).isInstanceOf(IllegalArgumentException.class);
+    }
+    assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(20);
+    assertThat(carts.getCart(customer.getId()).stream().flatMap(c -> c.getItems().stream())).hasSize(2);
+  }
+
+  @Test
+  void selectedCheckoutVoucherMinimumAndUnavailableItemsUseOnlySelection() {
+    Product unselected = product(shop, category, "Không chọn", 20);
+    add(customer, product, 1, "{}"); add(customer, unselected, 1, "{}");
+    var lines=carts.getCart(customer.getId()).getFirst().getItems();
+    Long chosen=lines.stream().filter(i -> i.getProductId().equals(product.getId())).findFirst().orElseThrow().getCartItemId();
+    String code="SEL"+System.nanoTime();var voucher=voucher(code,VoucherType.PRODUCT);
+    voucher.setMinOrderAmount(new BigDecimal("50000"));voucher.setDiscountValue(new BigDecimal("5000"));
+    vouchers.save(shop.getId(),owner.getId(),null,voucher);
+    var r=request(shop,PaymentMethod.COD);r.setCartItemIds(List.of(chosen));r.setVoucherCode(code);
+    assertThat(quotes.offers(customer.getId(),shop.getId(),r.getCartItemIds())).anyMatch(o -> o.code().equals(code)&&!o.eligible());
+    assertThatThrownBy(() -> quotes.quote(customer.getId(),r)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> orders.createOrder(customer.getId(),r)).isInstanceOf(IllegalArgumentException.class);
+    r.setCartItemIds(lines.stream().map(i -> i.getCartItemId()).toList());
+    assertThat(quotes.quote(customer.getId(),r).totalAmount()).isEqualByComparingTo("70000");
+    unselected.setStatus(ProductStatus.ARCHIVED);products.save(unselected);
+    r.setCartItemIds(List.of(chosen));r.setVoucherCode(null);
+    assertThat(quotes.quote(customer.getId(),r).totalAmount()).isEqualByComparingTo("45000");
+    orders.createOrder(customer.getId(),r);
+    assertThat(carts.getCart(customer.getId()).getFirst().getItems()).hasSize(1);
+  }
+
+  @Test
+  void profileViewAndEditAreSeparateProtectedPages() throws Exception {
+    String token = jwt.generateAccessToken(customer.getId(), customer.getEmail());
+    var view=get("/customer/profile",token);var edit=get("/customer/profile/edit",token);
+    assertThat(view.statusCode()).isEqualTo(200);assertThat(edit.statusCode()).isEqualTo(200);
+    assertThat(view.body()).contains("id=\"edit-profile\"", "id=\"profile-fullName\"")
+        .doesNotContain("id=\"profileForm\"", "id=\"avatarForm\"");
+    assertThat(edit.body()).contains("id=\"profileForm\"", "id=\"avatarForm\"");
+    assertThat(get("/customer/profile/edit",null).statusCode()).isEqualTo(302);
   }
 }

@@ -24,8 +24,9 @@ public class CustomerOrderController {
   @GetMapping("/offers")
   public java.util.List<com.utetra.service.OrderQuoteService.Offer> offers(
       @org.springframework.security.core.annotation.AuthenticationPrincipal com.utetra.security.UserPrincipal principal,
-      @RequestParam Long shopId) {
-    return quoteService.offers(principal.getId(), shopId);
+      @RequestParam Long shopId,
+      @RequestParam(required = false) java.util.List<Long> cartItemIds) {
+    return quoteService.offers(principal.getId(), shopId, cartItemIds);
   }
 
   @PostMapping("/quote")

@@ -1,3 +1,7 @@
+> Cập nhật chọn món trong giỏ, trạng thái tiếng Việt, chi tiết ưu đãi và hồ sơ xem/sửa: xem [báo cáo mới](CART_ACCOUNT_DETAILS_2026-10-29.md).
+
+> Giao diện v2 và chính sách đánh giá mới: xem [báo cáo 29/10/2026](UI_V2_REVIEW_MERGE_2026-10-29.md).
+
 > Cập nhật QR VNPay: xem [triển khai Merchant hosted QR và điều kiện sandbox](VNPAY_HOSTED_QR_2026-10-29.md).
 
 > Cập nhật theo yêu cầu mới: đã tích hợp cộng ví COD khi giao và online khi callback thành công; xem [luồng cộng ví](ORDER_WALLET_SETTLEMENT_2026-10-29.md). Ghi chú chưa tích hợp cộng ví trong báo cáo cũ bên dưới đã được thay thế.
@@ -26,7 +30,7 @@ Cập nhật: 23/10/2026. Mã nguồn đã được chỉnh trực tiếp tại 
 - Đơn COD, VNPay, MoMo; lịch sử trạng thái; kiểm tra quyền xem/hủy/cập nhật đơn; hoàn lại tồn kho đúng một lần khi hủy hoặc trả hàng.
 - Voucher theo shop hoặc voucher toàn hệ thống có sẵn, giới hạn lượt dùng, mỗi người một lượt, thời gian/minimum/cap; voucher giảm tiền món hoặc phí giao hàng. Không cho sửa điều kiện voucher đã được sử dụng.
 - Promotion liên kết đúng sản phẩm của shop. Khi nhiều promotion cùng hiệu lực, dùng mức giảm tốt nhất cho từng sản phẩm; voucher được áp dụng sau giá promotion.
-- Đánh giá chỉ khi người mua có sản phẩm trong đơn DELIVERED, 1–5 sao, tối thiểu 50 ký tự, 1–5 ảnh/video. Mỗi người một đánh giá cho sản phẩm.
+- Đánh giá chỉ khi người mua có sản phẩm trong đơn DELIVERED, 1–5 sao; bình luận và ảnh/video không bắt buộc (bình luận tối đa 5000 ký tự, tối đa 5 tệp). Mỗi người một đánh giá cho sản phẩm.
 - WebSocket gửi thông báo sau commit, xác thực JWT cho STOMP và kiểm tra quyền subscribe. Lỗi gửi thông báo không biến giao dịch đã commit thành lỗi đặt hàng.
 
 ## Quy ước xác thực và phản hồi

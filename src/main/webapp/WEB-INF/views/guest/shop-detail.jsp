@@ -3,13 +3,14 @@
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 
 <!-- Giao diện hiển thị thông tin Cửa hàng -->
-<div class="text-center mb-5">
-    <h2 class="fw-bold text-warning">${shop.name}</h2>
-    <p class="text-muted"><i class="bi bi-geo-alt-fill"></i> ${shop.address}</p>
+<div class="customer-shop-heading">
+    <div><a href="${pageContext.request.contextPath}/" class="customer-text-link">← Tất cả cửa hàng</a><p class="customer-eyebrow">WELCOME TO YOUR TEA STOP</p><h1>${shop.name}</h1>
+    <p class="text-muted"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> ${shop.address}</p></div><span class="customer-shop-heading-art" aria-hidden="true"><i class="fa-solid fa-mug-hot"></i><span>Made for<br><em>your mood.</em></span></span>
 </div>
+<div class="customer-shop-menu-heading"><h2>Thực đơn cửa hàng</h2><p>Chọn món. Chọn vị. Thưởng thức theo cách của bạn.</p></div>
 
 <!-- Danh sách sản phẩm của Cửa hàng -->
-<div class="row">
+<div class="row customer-shop-products g-4">
     <c:if test="${empty products}">
         <div class="col-12 text-center text-muted">
             <p>Cửa hàng hiện chưa có sản phẩm nào.</p>
@@ -17,8 +18,8 @@
     </c:if>
 
     <c:forEach items="${products}" var="product">
-        <div class="col-md-3 mb-4">
-            <div class="card h-100 shadow-sm">
+        <div class="col-6 col-md-4 col-xl-3 mb-4">
+            <div class="card h-100 shadow-sm" data-reveal>
                 
                 <!-- Xử lý ảnh sản phẩm -->
                 <c:choose>

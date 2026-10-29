@@ -64,7 +64,8 @@ public class OrderServiceImpl implements OrderService {
         carts
             .findByUserIdAndShopId(userId, r.getShopId())
             .orElseThrow(() -> new IllegalArgumentException("Giỏ hàng cửa hàng này đang trống"));
-    List<CartItem> lines = cartItems.findByCartId(cart.getId());
+    List<CartItem> lines = CartSelection.select(
+        cartItems.findByCartId(cart.getId()), r.getCartItemIds(), CartItem::getId);
     if (lines.isEmpty()) throw new IllegalArgumentException("Giỏ hàng đang trống");
     // Lock products in a stable order and aggregate all variants before reserving stock.
     Map<Long, Integer> quantities = new TreeMap<>();
