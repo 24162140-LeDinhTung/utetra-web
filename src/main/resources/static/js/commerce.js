@@ -147,10 +147,37 @@
     $('#place').disabled=true;$('#checkout').addEventListener('input',()=>{$('#place').disabled=true;currentQuote='';});$('#checkout').addEventListener('change',()=>{$('#place').disabled=true;currentQuote='';});
     bind('#quote','click',quote);bind('#checkout','submit',async()=>{const body=request();if(JSON.stringify(body)!==currentQuote){await quote();return;}const o=await api('/api/customer/orders',{method:'POST',body:{...body,expectedTotalAmount:confirmedTotal}});location.href=url('/customer/payment?orderId='+o.id);});
   }
+  let stopPaymentWatch = () => {};
   async function payment() {
-    const orderId=query.get('localOrderId')||query.get('orderId');if(!orderId)throw new Error('Thiếu mã đơn hàng.');const o=await api('/api/customer/orders/'+orderId);
-    content.innerHTML=`<h1>Thanh toán đơn hàng</h1><section class="ute-panel"><p>${esc(o.orderCode)}</p><p>Cửa hàng: ${esc(o.shopName)}</p>${totals(o)}<p>Phương thức: ${esc(o.paymentMethod)} · Thanh toán: <strong>${esc(o.paymentStatus)}</strong></p><p id="payment-note">${o.paymentMethod==='COD'?'Thanh toán cho người giao hàng khi nhận đơn.':'Kết quả được xác nhận qua thông báo trực tiếp từ cổng thanh toán. Nếu vừa quay lại từ cổng, hãy cập nhật trạng thái.'}</p><div class="ute-actions">${action('refresh-payment','Cập nhật trạng thái','btn btn-outline-success')}${o.status==='NEW'&&o.paymentStatus!=='SUCCESS'?action('pay','Mở cổng '+o.paymentMethod):''}${link('/customer/orders/'+o.id,'Xem đơn hàng')}</div></section>`;
-    bind('#refresh-payment','click',payment);bind('#pay','click',async()=>{const result=await api('/api/payment/'+o.paymentMethod.toLowerCase(),{method:'POST',body:{orderId:o.id}});location.assign(result.paymentUrl);});
+    stopPaymentWatch();
+    const orderId=query.get('localOrderId')||query.get('orderId');if(!orderId)throw new Error('Thiếu mã đơn hàng.');
+    const o=await api('/api/customer/orders/'+orderId);
+    const pending=o.paymentMethod==='VNPAY'&&o.status==='NEW'&&o.paymentStatus!=='SUCCESS';
+    content.innerHTML=`<h1>Thanh toán đơn hàng</h1><section class="ute-panel"><p>${esc(o.orderCode)}</p><p>Cửa hàng: ${esc(o.shopName)}</p>${totals(o)}<p>Phương thức: ${esc(o.paymentMethod)} · Thanh toán: <strong>${esc(o.paymentStatus)}</strong></p><p id="payment-note">${o.paymentMethod==='COD'?'Thanh toán cho người giao hàng khi nhận đơn.':'Web tự cập nhật khi nhận xác nhận thanh toán từ cổng.'}</p>${pending?'<div id="payment-qr" aria-live="polite"><p>Đang lấy mã QR từ VNPay…</p></div>':''}<div class="ute-actions">${action('refresh-payment','Cập nhật trạng thái','btn btn-outline-success')}${o.status==='NEW'&&o.paymentStatus!=='SUCCESS'?action('pay','Mở cổng '+o.paymentMethod):''}${link('/customer/orders/'+o.id,'Xem đơn hàng')}</div></section>`;
+    bind('#refresh-payment','click',payment);
+    bind('#pay','click',async()=>{const result=await api('/api/payment/'+o.paymentMethod.toLowerCase(),{method:'POST',body:{orderId:o.id}});location.assign(result.paymentUrl);});
+    let disposed=false,checking=false,expiresAt=null;
+    async function refreshStatus(){
+      if(disposed||checking||document.hidden)return;checking=true;
+      try{const current=await api('/api/customer/orders/'+o.id);if(!disposed&&(current.paymentStatus!==o.paymentStatus||current.status!==o.status))await payment();}
+      catch(e){if(!disposed)$('#payment-note').textContent='Chưa cập nhật được trạng thái. '+e.message;}finally{checking=false;}
+    }
+    async function loadQr(){
+      const box=$('#payment-qr');if(!box||disposed)return;
+      box.textContent='Đang lấy mã QR từ VNPay…';
+      try{
+        const result=await api('/api/payment/vnpay/qr',{method:'POST',body:{orderId:o.id}});if(disposed)return;
+        if(!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(result.qrImage))throw new Error('Ảnh QR không hợp lệ.');
+        expiresAt=Date.parse(result.expiresAt);
+        box.innerHTML='<h2 class="h5">Quét mã thanh toán VNPay</h2>'+(result.environment==='sandbox'?'<p class="text-warning">QR thử nghiệm — không dùng để chuyển tiền thật.</p>':'<p>Quét bằng ứng dụng hỗ trợ VNPAY-QR và kiểm tra số tiền trước khi xác nhận.</p>')+'<img alt="Mã QR thanh toán đơn hàng" style="max-width:100%;width:320px;height:auto" src="'+result.qrImage+'"><p id="qr-countdown"></p>';
+      }catch(e){if(!disposed){box.innerHTML='<p>'+esc(e.message)+'</p>'+action('qr-retry','Thử lấy lại QR','btn btn-outline-success');bind('#qr-retry','click',loadQr);}}
+    }
+    const polling=setInterval(refreshStatus,5000);
+    const countdown=setInterval(()=>{if(!expiresAt||disposed)return;const left=Math.max(0,Math.ceil((expiresAt-Date.now())/1000));const node=$('#qr-countdown');if(node)node.textContent='Mã hết hạn sau '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0');if(left===0){expiresAt=null;$('#payment-qr').innerHTML='<p>Mã QR đã hết hạn.</p>'+action('qr-retry','Tạo lại mã QR','btn btn-outline-success');bind('#qr-retry','click',loadQr);}},1000);
+    stopPaymentWatch=()=>{disposed=true;clearInterval(polling);clearInterval(countdown);};
+    window.addEventListener('pagehide',()=>stopPaymentWatch(),{once:true});
+    if(o.paymentStatus!=='SUCCESS')watch('/topic/order/'+o.id+'/status',refreshStatus);
+    if(pending)await loadQr();
   }
   const vendorNav = () => `<nav class="ute-nav">${link('/vendor/products','Sản phẩm')}${link('/vendor/orders','Đơn hàng')}${link('/vendor/vouchers','Voucher')}${link('/vendor/promotions','Khuyến mãi')}</nav>`;
   const adminNav = () => `<nav class="ute-nav">${link('/admin/categories','Danh mục')}${link('/admin/attributes','Thuộc tính & duyệt sản phẩm')}</nav>`;

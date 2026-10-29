@@ -774,4 +774,72 @@ class CommerceIntegrationTests {
     assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("0");
     assertThat(orders.getDetail(customer.getId(), o.getId()).getPaymentStatus()).isEqualTo("SUCCESS");
   }
+
+  @Test
+  void hostedQrIsSignedCachedScannableAndPaidOnlyByVerifiedIpn() throws Exception {
+    var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+    var captured = new java.util.concurrent.atomic.AtomicReference<Map<String,String>>();
+    var calls = new java.util.concurrent.atomic.AtomicInteger();
+    String qrContent = "000201" + "1234567890".repeat(16);
+    server.createContext("/pay", exchange -> {
+      Map<String,String> params = new HashMap<>();
+      for (String pair : exchange.getRequestURI().getRawQuery().split("&")) {
+        String[] parts = pair.split("=",2);
+        params.put(java.net.URLDecoder.decode(parts[0], java.nio.charset.StandardCharsets.UTF_8),
+            java.net.URLDecoder.decode(parts[1], java.nio.charset.StandardCharsets.UTF_8));
+      }
+      captured.set(params); calls.incrementAndGet();
+      byte[] body = ("{\"code\":\"00\",\"message\":\"ok\",\"qrcontent\":\"" + qrContent + "\"}").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      exchange.getResponseHeaders().set("Content-Type", "application/json");
+      exchange.sendResponseHeaders(200, body.length);exchange.getResponseBody().write(body);exchange.close();
+    });
+    server.start();
+    environment.getPropertySources().addFirst(new org.springframework.core.env.MapPropertySource("qr-test", Map.of("payment.vnpay.url", "http://127.0.0.1:"+server.getAddress().getPort()+"/pay")));
+    var implementation = (com.utetra.service.impl.PaymentServiceImpl) org.springframework.test.util.AopTestUtils.getTargetObject(payments);
+    var previous = org.springframework.test.util.ReflectionTestUtils.getField(implementation, "vnpUrl");
+    org.springframework.test.util.ReflectionTestUtils.setField(implementation, "vnpUrl", environment.getProperty("payment.vnpay.url"));
+    try {
+      var order = buy(PaymentMethod.VNPAY);
+      assertThatThrownBy(() -> payments.startVnpayQr(other.getId(), order.getId(), "127.0.0.1")).isInstanceOf(AccessDeniedException.class);
+      assertThat(calls.get()).isZero();
+      var qr = payments.startVnpayQr(customer.getId(), order.getId(), "127.0.0.1");
+      assertThat(captured.get()).containsEntry("vnp_Command", "genqr").containsEntry("vnp_Amount", "7500000");
+      assertThat(captured.get().get("vnp_SecureHash")).isEqualTo(PaymentSignatures.hmac("HmacSHA512", "test-vnpay-secret", PaymentSignatures.vnpay(captured.get())));
+      var png = java.util.Base64.getDecoder().decode(qr.get("qrImage").split(",",2)[1]);
+      var image = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(png));
+      int[] pixels = image.getRGB(0,0,image.getWidth(),image.getHeight(),null,0,image.getWidth());
+      var bitmap = new com.google.zxing.BinaryBitmap(new com.google.zxing.common.HybridBinarizer(new com.google.zxing.RGBLuminanceSource(image.getWidth(),image.getHeight(),pixels)));
+      assertThat(new com.google.zxing.qrcode.QRCodeReader().decode(bitmap).getText()).isEqualTo(qrContent);
+      assertThat(payments.startVnpayQr(customer.getId(), order.getId(), "127.0.0.1").get("reference")).isEqualTo(qr.get("reference"));
+      assertThat(calls.get()).isEqualTo(1);
+      assertThat(orders.getDetail(customer.getId(),order.getId()).getPaymentStatus()).isEqualTo("PENDING");
+      assertThat(wallets.findByShopId(shop.getId())).isEmpty();
+      var fallback = payments.start(customer.getId(),order.getId(),PaymentMethod.VNPAY,"127.0.0.1");
+      assertThat(fallback.get("reference")).isNotEqualTo(qr.get("reference"));
+      payments.vnpayCallback(vnpay(qr.get("reference"),"7500000"));
+      assertThat(wallets.findByShopId(shop.getId()).orElseThrow().getBalance()).isEqualByComparingTo("60000");
+      assertThatThrownBy(() -> payments.startVnpayQr(customer.getId(),order.getId(),"127.0.0.1")).isInstanceOf(IllegalArgumentException.class);
+    } finally {
+      org.springframework.test.util.ReflectionTestUtils.setField(implementation,"vnpUrl",previous);
+      environment.getPropertySources().remove("qr-test");server.stop(0);
+    }
+  }
+
+  @Test
+  void hostedQrRejectionDoesNotInventQrOrChangeOrderPayment() throws Exception {
+    var server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
+    server.createContext("/pay", exchange -> {
+      byte[] body = "{\"code\":\"02\",\"message\":\"Merchant unavailable\",\"qrcontent\":\"\"}".getBytes();
+      exchange.getResponseHeaders().set("Content-Type","application/json");exchange.sendResponseHeaders(200,body.length);exchange.getResponseBody().write(body);exchange.close();
+    });server.start();
+    var implementation = (com.utetra.service.impl.PaymentServiceImpl) org.springframework.test.util.AopTestUtils.getTargetObject(payments);
+    var previous=org.springframework.test.util.ReflectionTestUtils.getField(implementation,"vnpUrl");
+    org.springframework.test.util.ReflectionTestUtils.setField(implementation,"vnpUrl","http://127.0.0.1:"+server.getAddress().getPort()+"/pay");
+    try {
+      var order=buy(PaymentMethod.VNPAY);
+      assertThatThrownBy(() -> payments.startVnpayQr(customer.getId(),order.getId(),"127.0.0.1")).isInstanceOf(IllegalStateException.class);
+      assertThat(orders.getDetail(customer.getId(),order.getId()).getPaymentStatus()).isEqualTo("PENDING");
+      assertThat(transactions.findFirstByOrderIdOrderByIdDesc(order.getId()).orElseThrow().getQrContent()).isNull();
+    } finally { org.springframework.test.util.ReflectionTestUtils.setField(implementation,"vnpUrl",previous);server.stop(0); }
+  }
 }

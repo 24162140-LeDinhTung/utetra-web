@@ -33,6 +33,13 @@ public class PaymentController {
     return payments.start(u.getId(), r.orderId(), PaymentMethod.VNPAY, http.getRemoteAddr());
   }
 
+  @PostMapping("/vnpay/qr")
+  public Map<String, String> vnpayQr(
+      @AuthenticationPrincipal UserPrincipal u,
+      @Valid @RequestBody PaymentRequest r, HttpServletRequest http) {
+    return payments.startVnpayQr(u.getId(), r.orderId(), http.getRemoteAddr());
+  }
+
   @PostMapping("/momo")
   public Map<String, String> momo(
       @AuthenticationPrincipal UserPrincipal u,

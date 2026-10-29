@@ -82,7 +82,7 @@ public class PaymentServiceImpl implements PaymentService {
     PaymentTransaction tx =
         transactions
             .findFirstByOrderIdOrderByIdDesc(orderId)
-            .filter(t -> t.getStatus() == PaymentStatus.PENDING)
+            .filter(t -> t.getStatus() == PaymentStatus.PENDING && t.getQrContent() == null)
             .orElseGet(
                 () -> {
                   PaymentTransaction n = new PaymentTransaction();
@@ -181,6 +181,56 @@ public class PaymentServiceImpl implements PaymentService {
     o.setPaymentStatus(PaymentStatus.PENDING);
     orders.save(o);
     return Map.of("paymentUrl", url, "reference", tx.getReference());
+  }
+
+  public Map<String, String> startVnpayQr(Long userId, Long orderId, String ip) {
+    configured(tmn, vnpSecret);
+    Order order = orders.lockById(orderId).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn"));
+    access.order(order, userId);
+    if (order.getPaymentMethod() != PaymentMethod.VNPAY || order.getStatus() != OrderStatus.NEW
+        || order.getPaymentStatus() == PaymentStatus.SUCCESS || order.getTotalAmount().signum() <= 0)
+      throw new IllegalArgumentException("Đơn không còn chờ thanh toán VNPay");
+    var now = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
+    var existing = transactions.findFirstByOrderIdOrderByIdDesc(orderId)
+        .filter(t -> t.getStatus() == PaymentStatus.PENDING && t.getQrContent() != null
+            && t.getQrExpiresAt() != null && t.getQrExpiresAt().isAfter(now.toLocalDateTime()));
+    if (existing.isPresent()) return qrResponse(existing.get());
+    PaymentTransaction tx = new PaymentTransaction();
+    tx.setOrder(order); tx.setProvider(PaymentMethod.VNPAY); tx.setAmount(order.getTotalAmount());
+    tx.setReference("QR" + UUID.randomUUID().toString().replace("-", ""));
+    var fmt = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    Map<String, String> params = new TreeMap<>();
+    params.put("vnp_Version", "2.1.1"); params.put("vnp_Command", "genqr");
+    params.put("vnp_TmnCode", tmn); params.put("vnp_Amount", tx.getAmount().multiply(BigDecimal.valueOf(100)).toBigIntegerExact().toString());
+    params.put("vnp_CurrCode", "VND"); params.put("vnp_TxnRef", tx.getReference());
+    params.put("vnp_OrderInfo", "Thanh toan " + order.getOrderCode());
+    params.put("vnp_OrderType", "other"); params.put("vnp_Locale", "vn");
+    params.put("vnp_ReturnUrl", returnUrl + "?localOrderId=" + orderId);
+    params.put("vnp_IpAddr", ip); params.put("vnp_CreateDate", now.format(fmt));
+    params.put("vnp_ExpireDate", now.plusMinutes(15).format(fmt));
+    String query = PaymentSignatures.vnpay(params);
+    String signedUrl = vnpUrl + "?" + query + "&vnp_SecureHash=" + PaymentSignatures.hmac("HmacSHA512", vnpSecret, query);
+    Map<?, ?> response;
+    try {
+      var factory = new JdkClientHttpRequestFactory(HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build());
+      factory.setReadTimeout(Duration.ofSeconds(10));
+      response = RestClient.builder().requestFactory(factory).build().get().uri(java.net.URI.create(signedUrl))
+          .retrieve().body(Map.class);
+    } catch (org.springframework.web.client.RestClientException e) {
+      throw new IllegalStateException("Chưa tạo được QR từ VNPay. Bạn có thể dùng nút Mở cổng VNPAY hoặc thử lại sau.");
+    }
+    if (response == null || !"00".equals(response.get("code"))
+        || !(response.get("qrcontent") instanceof String content) || content.isBlank() || content.length() > 4096)
+      throw new IllegalStateException("VNPay chưa cấp được QR cho giao dịch này. Tài khoản cần hỗ trợ Merchant hosted QR; bạn vẫn có thể mở cổng VNPAY.");
+    tx.setQrContent((String) response.get("qrcontent")); tx.setQrExpiresAt(now.plusMinutes(15).toLocalDateTime());
+    transactions.save(tx);
+    return qrResponse(tx);
+  }
+
+  private Map<String, String> qrResponse(PaymentTransaction tx) {
+    return Map.of("qrImage", PaymentQrImage.png(tx.getQrContent()), "reference", tx.getReference(),
+        "expiresAt", tx.getQrExpiresAt().atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toInstant().toString(),
+        "environment", vnpUrl.contains("sandbox.vnpayment.vn") ? "sandbox" : "live");
   }
 
   public Map<String, String> vnpayCallback(Map<String, String> p) {
