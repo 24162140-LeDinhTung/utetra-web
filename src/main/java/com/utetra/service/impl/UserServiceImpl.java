@@ -66,6 +66,7 @@ public class UserServiceImpl implements UserService {
         res.setEmail(user.getEmail());
         res.setFullName(user.getFullName());
         res.setPhone(user.getPhone());
+        res.setShippingAddress(user.getShippingAddress());
         res.setAvatarUrl(user.getAvatarUrl());
         res.setCoverUrl(user.getCoverUrl());
         res.setStatus(user.getStatus() != null ? user.getStatus().name() : null);

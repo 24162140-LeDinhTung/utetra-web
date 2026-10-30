@@ -30,6 +30,9 @@ public class HomeController {
     @Autowired
     private ShopService shopService;
 
+    @Autowired private com.utetra.service.ProductService catalog;
+    @Autowired private com.utetra.repository.CategoryRepository categories;
+
     // 1. Trang chủ hiển thị danh sách Shop
     @GetMapping("/")
     public String home(Model model) {
@@ -61,13 +64,26 @@ public class HomeController {
     // 5. Trang chi tiết cửa hàng (click vào Shop ở trang chủ)
     @Transactional(readOnly = true) 
     @GetMapping("/shops/{id}")
-    public String shopDetail(@PathVariable Long id, Model model) {
+    public String shopDetail(@PathVariable Long id, @jakarta.validation.Valid @org.springframework.web.bind.annotation.ModelAttribute("search") com.utetra.dto.request.product.ProductSearchRequest search, Model model) {
         Shop shop = shopRepository.findById(id)
             .filter(s -> s.getStatus() == ShopStatus.ACTIVE && !Boolean.TRUE.equals(s.getIsDeleted()))
             .orElseThrow(() -> new com.utetra.exception.custom.ResourceNotFoundException("Không tìm thấy cửa hàng đang hoạt động"));
-        List<Product> products = productRepository.findByShopIdAndStatusAndIsDeletedFalse(id, ProductStatus.ACTIVE);
+        // The path determines the shop; a query parameter cannot switch the search to another shop.
+        search.setShopId(id);
+        var result = catalog.search(search);
+        var ids = result.getItems().stream().map(com.utetra.dto.response.product.ProductResponse::getId).toList();
+        var indexed = productRepository.findAllById(ids).stream()
+            .collect(java.util.stream.Collectors.toMap(Product::getId, p -> p));
         model.addAttribute("shop", shop);
-        model.addAttribute("products", products);
+        var displayed = ids.stream().map(indexed::get).toList();
+        // JSP renders after this read transaction closes; load its image and option collections here.
+        for (Product product : displayed) {
+            org.hibernate.Hibernate.initialize(product.getImages());
+            product.getAttributes().forEach(a -> org.hibernate.Hibernate.initialize(a.getValues()));
+        }
+        model.addAttribute("products", displayed);
+        model.addAttribute("result", result);
+        model.addAttribute("categories", categories.findByIsDeletedFalseOrderByNameAsc());
         return "guest/shop-detail";
     }
 }

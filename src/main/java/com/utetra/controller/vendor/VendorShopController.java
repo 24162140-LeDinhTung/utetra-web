@@ -22,6 +22,8 @@ public class VendorShopController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired private com.utetra.service.ShopFormService shopForms;
+
     // Hàm lấy User đang đăng nhập an toàn
     private User getCurrentUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal().equals("anonymousUser")) {
@@ -88,18 +90,19 @@ public class VendorShopController {
 
     // 4. Xử lý Lưu (Thêm mới hoặc Cập nhật)
     @PostMapping("/save")
-    public String saveShop(@ModelAttribute Shop shopForm, Authentication authentication) {
+    public String saveShop(@RequestParam(required = false) Long id, @RequestParam String name,
+                           @RequestParam(required = false) String description,
+                           @RequestParam(required = false) org.springframework.web.multipart.MultipartFile avatarFile,
+                           @RequestParam(required = false) org.springframework.web.multipart.MultipartFile coverFile,
+                           Authentication authentication, org.springframework.web.servlet.mvc.support.RedirectAttributes redirect) {
         User owner = getCurrentUser(authentication);
-        if (owner == null) {
-            return "redirect:/auth/login";
+        if (owner == null) return "redirect:/auth/login";
+        try {
+            shopForms.save(owner, id, name, description, avatarFile, coverFile);
+        } catch (IllegalArgumentException ex) {
+            redirect.addFlashAttribute("error", ex.getMessage());
+            return id == null ? "redirect:/vendor/my-shops/create" : "redirect:/vendor/my-shops/edit/" + id;
         }
-
-        if (shopForm.getId() == null) {
-            shopService.createShop(owner, shopForm.getName(), shopForm.getDescription());
-        } else {
-            shopService.updateShop(shopForm.getId(), shopForm.getName(), shopForm.getDescription(),
-                                   shopForm.getAvatarUrl(), shopForm.getCoverUrl());
-        }
-        return "redirect:/vendor/my-shops"; // <-- SỬA REDIRECT
+        return "redirect:/vendor/my-shops";
     }
 }

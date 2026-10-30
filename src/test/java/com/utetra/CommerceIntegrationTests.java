@@ -1072,4 +1072,101 @@ class CommerceIntegrationTests {
     assertThat(quotes.promotions(customer.getId(),shop.getId(),order.getCartItemIds())).anyMatch(o->o.id().equals(promo.id())&&!o.eligible());
     assertThatThrownBy(()->quotes.quote(customer.getId(),order)).isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  void addressIsRememberedOnlyAfterDeliveryAndVendorSeesBuyerIdentity() throws Exception {
+    assertThat(users.findById(customer.getId()).orElseThrow().getShippingAddress()).isNull();
+    add(customer, product, 1, "{}");
+    var blank = request(shop, PaymentMethod.COD); blank.setShippingAddress("   ");
+    assertThatThrownBy(() -> orders.createOrder(customer.getId(), blank))
+        .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("địa chỉ nhận hàng");
+    var first = request(shop, PaymentMethod.COD); first.setShippingAddress("Địa chỉ thứ nhất");
+    var placed = orders.createOrder(customer.getId(), first);
+    assertThat(users.findById(customer.getId()).orElseThrow().getShippingAddress()).isNull();
+    advance(placed.getId(), OrderStatus.PICKED_UP);
+    advance(placed.getId(), OrderStatus.SHIPPING);
+    assertThat(users.findById(customer.getId()).orElseThrow().getShippingAddress()).isNull();
+    advance(placed.getId(), OrderStatus.DELIVERED);
+    assertThat(users.findById(customer.getId()).orElseThrow().getShippingAddress()).isEqualTo("Địa chỉ thứ nhất");
+    var vendorDetail = orders.getVendorDetail(shop.getId(), owner.getId(), placed.getId());
+    assertThat(vendorDetail.getCustomerName()).isEqualTo(customer.getFullName());
+    assertThat(vendorDetail.getCustomerEmail()).isEqualTo(customer.getEmail());
+    assertThatThrownBy(() -> orders.getVendorDetail(shop.getId(), other.getId(), placed.getId()))
+        .isInstanceOf(AccessDeniedException.class);
+    var profile = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/customer/profile"))
+        .header("Authorization", "Bearer " + jwt.generateAccessToken(customer.getId(), customer.getEmail())).GET().build();
+    assertThat(HttpClient.newHttpClient().send(profile, HttpResponse.BodyHandlers.ofString()).body())
+        .contains("Địa chỉ thứ nhất");
+    add(customer, product, 1, "{}");
+    var cancelled = orders.createOrder(customer.getId(), request(shop, PaymentMethod.COD));
+    var cancel = new CancelOrderRequest(); cancel.setReason("Hủy thử");
+    orders.cancelOrder(customer.getId(), cancelled.getId(), cancel);
+    assertThat(users.findById(customer.getId()).orElseThrow().getShippingAddress()).isEqualTo("Địa chỉ thứ nhất");
+    var next = buy(PaymentMethod.COD);
+    advance(next.getId(), OrderStatus.PICKED_UP); advance(next.getId(), OrderStatus.SHIPPING);
+    advance(next.getId(), OrderStatus.DELIVERED);
+    assertThat(users.findById(customer.getId()).orElseThrow().getShippingAddress())
+        .isEqualTo(next.getShippingAddress());
+  }
+
+  @Test
+  void shopSearchFiltersAndSortsWithinPathShopIncludingPagination() throws Exception {
+    var local = product(shop, category, "MatchLocal", 10); local.setPrice(new BigDecimal("10000")); products.save(local);
+    product(shop2, category, "MatchForeign", 10);
+    var expensive = product(shop, category, "MatchExpensive", 10); expensive.setPrice(new BigDecimal("90000")); products.save(expensive);
+    String path = "/shops/" + shop.getId() + "?keyword=Match&sort=price_asc&size=1&shopId=" + shop2.getId();
+    var first = get(path, null);
+    assertThat(first.statusCode()).isEqualTo(200);
+    assertThat(first.body()).contains("MatchLocal", "Tìm kiếm", "Trang sau").doesNotContain("MatchForeign", "MatchExpensive");
+    assertThat(get(path + "&page=1", null).body()).contains("MatchExpensive").doesNotContain("MatchLocal", "MatchForeign");
+    assertThat(get("/shops/" + shop.getId() + "?keyword=NoSuchDrink", null).body())
+        .contains("Không có sản phẩm phù hợp").doesNotContain("MatchLocal");
+    assertThat(get("/shops/" + shop.getId() + "?categoryId=" + category2.getId(), null).body()).doesNotContain("MatchLocal");
+  }
+
+  HttpResponse<String> saveShopForm(User actor, Long id, boolean images, String imageType) throws Exception {
+    String boundary = "utetra-test-boundary";
+    var bytes = new java.io.ByteArrayOutputStream();
+    var fields = new java.util.LinkedHashMap<String,String>();
+    if (id != null) fields.put("id", id.toString());
+    fields.put("name", "Uploaded shop"); fields.put("description", "Shop description");
+    fields.put("avatarUrl", "https://untrusted.example/ignored.png");
+    for (var field : fields.entrySet()) bytes.write(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + field.getKey() + "\"\r\n\r\n" + field.getValue() + "\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    if (images) for (String field : List.of("avatarFile", "coverFile")) {
+      bytes.write(("--" + boundary + "\r\nContent-Disposition: form-data; name=\"" + field + "\"; filename=\"shop.png\"\r\nContent-Type: " + imageType + "\r\n\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      bytes.write(java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aCfoAAAAASUVORK5CYII="));
+      bytes.write("\r\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+    bytes.write(("--" + boundary + "--\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    var req = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/vendor/my-shops/save"))
+        .header("Authorization", "Bearer " + jwt.generateAccessToken(actor.getId(), actor.getEmail()))
+        .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+        .POST(HttpRequest.BodyPublishers.ofByteArray(bytes.toByteArray())).build();
+    return HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
+  }
+
+  @Autowired StorageService shopImageStorage;
+  @Test
+  void shopFormUploadsBothImagesPreservesThemAndRejectsForeignShopAndNonImages() throws Exception {
+    String avatar=null,cover=null;
+    try {
+      var page = get("/vendor/my-shops/edit/" + shop.getId(), jwt.generateAccessToken(owner.getId(), owner.getEmail()));
+      assertThat(page.statusCode()).isEqualTo(200);
+      assertThat(page.body()).contains("multipart/form-data", "avatarFile", "coverFile").doesNotContain("Ảnh đại diện (URL)");
+      assertThat(saveShopForm(owner, shop.getId(), true, "image/png").statusCode()).isEqualTo(302);
+      var saved=shops.findById(shop.getId()).orElseThrow();avatar=saved.getAvatarUrl();cover=saved.getCoverUrl();
+      assertThat(avatar).startsWith("/uploads/utetra/shops/" + shop.getId() + "/");
+      assertThat(cover).startsWith("/uploads/utetra/shops/" + shop.getId() + "/").isNotEqualTo(avatar);
+      var storefront = get("/shops/" + shop.getId(), null);
+      assertThat(storefront.statusCode()).isEqualTo(200);
+      assertThat(storefront.body()).contains(avatar, cover, "customer-shop-avatar", "customer-shop-cover");
+      assertThat(saveShopForm(owner, shop.getId(), false, "image/png").statusCode()).isEqualTo(302);
+      assertThat(shops.findById(shop.getId()).orElseThrow().getAvatarUrl()).isEqualTo(avatar);
+      assertThat(saveShopForm(owner, shop.getId(), true, "text/html").statusCode()).isEqualTo(302);
+      assertThat(shops.findById(shop.getId()).orElseThrow().getCoverUrl()).isEqualTo(cover);
+      var foreignShop = shop(user(RoleName.ROLE_VENDOR), "Foreign shop");
+      assertThat(saveShopForm(owner, foreignShop.getId(), true, "image/png").statusCode()).isEqualTo(403);
+      assertThat(shops.findById(foreignShop.getId()).orElseThrow().getName()).isEqualTo("Foreign shop");
+    } finally { if(avatar!=null)shopImageStorage.deleteFile(avatar);if(cover!=null)shopImageStorage.deleteFile(cover); }
+  }
 }
