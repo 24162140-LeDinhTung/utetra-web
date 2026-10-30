@@ -95,7 +95,8 @@ public class SecurityConfig {
                     "/api/categories/**",
                     "/api/users/*/public",
                     "/api/payment/vnpay/ipn",
-                    "/api/payment/momo/ipn"
+                    "/api/payment/momo/ipn",
+                    "/api/payment/sepay/webhook"
                 ).permitAll()
 
                 // 3. SIẾT CHẶT QUYỀN TRUY CẬP

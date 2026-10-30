@@ -48,6 +48,7 @@
                             <i class="bi bi-calendar3 me-1"></i> ${shop.createdAt}
                         </td>
                         <td class="text-end pe-4">
+                            <a href="${pageContext.request.contextPath}/vendor/my-shops/${shop.id}" class="btn btn-sm btn-outline-success">Xem chi tiết</a>
                             <a href="${pageContext.request.contextPath}/vendor/my-shops/edit/${shop.id}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i> Sửa
                             </a>

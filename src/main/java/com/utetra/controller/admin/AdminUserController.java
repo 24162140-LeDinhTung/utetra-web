@@ -32,6 +32,15 @@ public class AdminUserController {
         return "admin/user-list";
     }
 
+    @GetMapping("/shops/{id}")
+    public String shopDetail(@org.springframework.web.bind.annotation.PathVariable Long id, Model model) {
+        Shop shop = shopRepository.findById(id).orElseThrow(() ->
+            new com.utetra.exception.custom.ResourceNotFoundException("Không tìm thấy cửa hàng"));
+        model.addAttribute("shop", shop);
+        model.addAttribute("backUrl", "/admin/users");
+        return "vendor/shop-detail";
+    }
+
     @PostMapping(value = "/shops/delete", produces = "application/json")
     @Transactional
     public ResponseEntity<?> deleteShop(@RequestParam(required = false) Long shopId) {

@@ -19,6 +19,7 @@ public class PaymentAvailability {
     if (method == null) return false;
     return switch (method) {
       case COD -> true;
+      case SEPAY -> configured("payment.sepay.account-number", "payment.sepay.bank", "payment.sepay.account-name", "payment.sepay.webhook-key");
       case VNPAY -> configured("payment.vnpay.tmn-code", "payment.vnpay.hash-secret");
       case MOMO -> configured("payment.momo.partner-code", "payment.momo.access-key",
           "payment.momo.secret-key", "payment.momo.ipn-url");

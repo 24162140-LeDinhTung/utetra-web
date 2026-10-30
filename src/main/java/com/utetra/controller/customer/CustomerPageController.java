@@ -19,8 +19,9 @@ public class CustomerPageController {
 
     private final FavoriteService favoriteService;
 
-    @GetMapping("/profile")
-    public String profilePage() {
+    @GetMapping({"/profile", "/profile/edit"})
+    public String profilePage(jakarta.servlet.http.HttpServletRequest request, Model model) {
+        model.addAttribute("editingProfile", request.getRequestURI().endsWith("/edit"));
         return "customer/profile";
     }
 

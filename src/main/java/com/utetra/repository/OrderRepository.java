@@ -39,8 +39,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
   // === LẤY DOANH THU THEO TỪNG THÁNG CỦA NĂM HIỆN TẠI (ĐÃ TRỪ PHÍ SHIP) ===
   // Lưu ý: Tên bảng 'orders' và các cột phải khớp chính xác với Database của bạn
-  @Query(value = "SELECT MONTH(o.created_at) as month, SUM(o.total_amount - COALESCE(o.shipping_fee, 0)) as revenue " +
+  @Query(value = "SELECT MONTH(o.created_at) as revenue_month, SUM(o.total_amount - COALESCE(o.shipping_fee, 0)) as revenue " +
                  "FROM orders o WHERE o.status = 'DELIVERED' AND YEAR(o.created_at) = YEAR(CURRENT_DATE) " +
-                 "GROUP BY MONTH(o.created_at) ORDER BY month", nativeQuery = true)
+                 "GROUP BY MONTH(o.created_at) ORDER BY revenue_month", nativeQuery = true)
   List<Object[]> getMonthlyRevenueCurrentYear();
 }

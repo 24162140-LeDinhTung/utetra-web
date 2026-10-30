@@ -50,6 +50,18 @@ public class VendorShopController {
         return "vendor/shop-list";
     }
 
+    @GetMapping("/{id}")
+    public String detail(@PathVariable Long id, Model model, Authentication authentication) {
+        User owner = getCurrentUser(authentication);
+        if (owner == null) return "redirect:/auth/login";
+        Shop shop = shopService.getShopById(id);
+        if (Boolean.TRUE.equals(shop.getIsDeleted()) || !shop.getOwner().getId().equals(owner.getId()))
+            throw new org.springframework.security.access.AccessDeniedException("Cửa hàng không thuộc bạn");
+        model.addAttribute("shop", shop);
+        model.addAttribute("backUrl", "/vendor/my-shops");
+        return "vendor/shop-detail";
+    }
+
     // 2. Hiển thị form tạo Shop
     @GetMapping("/create")
     public String showCreateForm(Model model) {

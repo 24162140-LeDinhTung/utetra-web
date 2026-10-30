@@ -21,9 +21,8 @@ public class CreateReviewRequest {
   @Max(5)
   private Integer rating;
 
-  @jakarta.validation.constraints.NotBlank
-  @Size(max = 5000, min = 50, message = "Comment phải có ít nhất 50 ký tự")
+  @Size(max = 5000, message = "Bình luận tối đa 5000 ký tự")
   private String comment;
 
-  private List<String> mediaUrls; // ảnh/video đã upload Cloudinary trước
+  private List<String> mediaUrls; // ảnh/video đã upload; không bắt buộc
 }

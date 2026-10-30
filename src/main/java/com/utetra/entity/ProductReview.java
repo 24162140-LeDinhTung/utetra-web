@@ -22,5 +22,5 @@ public class ProductReview extends BaseEntity {
     private Integer rating; // 1-5
 
     @Column(name = "comment", nullable = false, columnDefinition = "TEXT")
-    private String comment; // ≥ 50 ký tự, validate ở tầng DTO/Service
+    private String comment; // Bình luận không bắt buộc; lưu chuỗi rỗng khi chỉ chấm sao
 }

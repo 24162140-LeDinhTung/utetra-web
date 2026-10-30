@@ -39,24 +39,21 @@ public class ReviewServiceImpl implements ReviewService {
     if (reviews.existsByUserIdAndProductIdAndIsDeletedFalse(userId, r.getProductId()))
       throw new IllegalArgumentException("Bạn đã đánh giá sản phẩm này");
 
-    if (r.getComment() == null
-        || r.getComment().trim().length() < 50
+    if (r.getComment() != null && r.getComment().length() > 5000
         || r.getRating() == null
         || r.getRating() < 1
         || r.getRating() > 5
-        || r.getMediaUrls() == null
-        || r.getMediaUrls().isEmpty()
-        || r.getMediaUrls().size() > 5)
-      throw new IllegalArgumentException("Đánh giá cần 1–5 sao, ít nhất 50 ký tự và 1–5 ảnh/video");
+        || r.getMediaUrls() != null && r.getMediaUrls().size() > 5)
+      throw new IllegalArgumentException("Đánh giá cần 1–5 sao, bình luận tối đa 5000 ký tự và tối đa 5 ảnh/video");
 
     ProductReview review = new ProductReview();
     review.setProduct(access.product(r.getProductId()));
     review.setUser(u);
     review.setRating(r.getRating());
-    review.setComment(r.getComment().trim());
+    review.setComment(r.getComment() == null ? "" : r.getComment().trim());
     reviews.save(review);
 
-    for (String url : r.getMediaUrls()) {
+    for (String url : r.getMediaUrls() == null ? List.<String>of() : r.getMediaUrls()) {
       if (url == null || url.trim().isEmpty() || url.length() > 255
           || !(url.startsWith("/uploads/utetra/reviews/" + userId + "/")
               || url.startsWith("https://res.cloudinary.com/"))) {

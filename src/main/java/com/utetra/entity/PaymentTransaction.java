@@ -35,6 +35,12 @@ public class PaymentTransaction extends BaseEntity {
   @Column(name = "payment_url", columnDefinition = "TEXT")
   private String paymentUrl;
 
+  @Column(name = "qr_content", columnDefinition = "TEXT")
+  private String qrContent;
+
+  @Column(name = "qr_expires_at")
+  private java.time.LocalDateTime qrExpiresAt;
+
   @Column(name = "result_code", length = 50)
   private String resultCode;
 }
