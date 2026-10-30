@@ -6,12 +6,12 @@ import com.utetra.entity.*;
 import com.utetra.exception.custom.ResourceNotFoundException;
 import com.utetra.repository.*;
 import com.utetra.service.*;
-import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Implements the existing shared interface so the customer controller can start. */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -24,6 +24,7 @@ public class FavoriteServiceImpl implements FavoriteService {
   private final CommerceAccess access;
   private final ProductPricing pricing;
 
+  @Override
   public void toggleFavoriteProduct(Long userId, Long productId) {
     users.lockById(userId).orElseThrow();
     Product p = access.product(productId);
@@ -38,14 +39,16 @@ public class FavoriteServiceImpl implements FavoriteService {
     }
   }
 
+  @Override
   @Transactional(readOnly = true)
   public List<ProductFavoriteResponse> getFavoriteProducts(Long userId) {
-    return favorites.findByUserId(userId).stream()
-        .filter(f -> !Boolean.TRUE.equals(f.getProduct().getIsDeleted()))
-        .map(f -> product(f.getProduct()))
-        .toList();
+    return favorites.findByUserIdAndIsDeletedFalse(userId).stream()
+            .filter(fav -> fav.getProduct() != null) // Lọc bỏ nếu sản phẩm bị null
+            .map(fav -> product(fav.getProduct()))
+            .collect(Collectors.toList());
   }
 
+  @Override
   public void toggleFollowShop(Long userId, Long shopId) {
     users.lockById(userId).orElseThrow();
     Shop shop =
@@ -63,6 +66,7 @@ public class FavoriteServiceImpl implements FavoriteService {
     }
   }
 
+  @Override
   @Transactional(readOnly = true)
   public List<ShopResponse> getFollowedShops(Long userId) {
     return follows.findByUserId(userId).stream()
@@ -77,6 +81,7 @@ public class FavoriteServiceImpl implements FavoriteService {
         .toList();
   }
 
+  @Override
   public void logProductView(Long userId, Long productId) {
     ProductViewLog v = new ProductViewLog();
     v.setUserId(userId);
@@ -84,19 +89,16 @@ public class FavoriteServiceImpl implements FavoriteService {
     views.save(v);
   }
 
+  @Override
   @Transactional(readOnly = true)
   public List<ProductFavoriteResponse> getViewHistory(Long userId) {
-    Set<Long> seen = new HashSet<>();
     return views.findByUserIdOrderByCreatedAtDesc(userId).stream()
-        .filter(
-            v ->
-                !Boolean.TRUE.equals(v.getProduct().getIsDeleted())
-                    && seen.add(v.getProduct().getId()))
-        .limit(100)
-        .map(v -> product(v.getProduct()))
-        .toList();
+            .filter(log -> log.getProduct() != null) // Lọc bỏ nếu sản phẩm bị null
+            .map(log -> product(log.getProduct()))
+            .collect(Collectors.toList());
   }
 
+  // Hàm helper dùng chung để map dữ liệu
   private ProductFavoriteResponse product(Product p) {
     ProductFavoriteResponse r = new ProductFavoriteResponse();
     r.setProductId(p.getId());

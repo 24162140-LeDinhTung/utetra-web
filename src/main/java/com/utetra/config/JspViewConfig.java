@@ -11,6 +11,8 @@ public class JspViewConfig {
   public InternalResourceViewResolver defaultViewResolver() {
     InternalResourceViewResolver resolver = new InternalResourceViewResolver();
     resolver.setViewClass(JstlView.class);
+    // Included JSPs cannot change the response charset set by the view.
+    resolver.setContentType("text/html;charset=UTF-8");
     resolver.setPrefix("/WEB-INF/views/");
     resolver.setSuffix(".jsp");
     // Tomcat 11 forward() unwraps the response buffer used by SiteMesh.

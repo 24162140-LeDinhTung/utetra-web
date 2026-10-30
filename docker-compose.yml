@@ -4,13 +4,13 @@ services:
     container_name: utetra-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: root123
       MYSQL_DATABASE: utetra_db
-      MYSQL_USER: utetra_user
-      MYSQL_PASSWORD: utetra_pass
+      MYSQL_USER: utetra
+      MYSQL_PASSWORD: utetra123
       TZ: Asia/Ho_Chi_Minh
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - utetra_mysql_data:/var/lib/mysql
       - ./database:/docker-entrypoint-initdb.d:ro

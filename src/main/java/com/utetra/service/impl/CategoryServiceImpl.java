@@ -35,7 +35,7 @@ public class CategoryServiceImpl implements CategoryService {
     java.util.Set<Long> seen = new java.util.HashSet<>();
     while (ancestor != null) {
       if (ancestor.getId().equals(id) || !seen.add(ancestor.getId()))
-        throw new IllegalArgumentException("Danh má»¥c cha táº¡o vÃ²ng láº·p");
+      throw new IllegalArgumentException("Danh mục cha tạo vòng lặp");
       ancestor = ancestor.getParent();
     }
     Category category = getById(id);

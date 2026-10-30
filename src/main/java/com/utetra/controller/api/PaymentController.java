@@ -16,6 +16,12 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class PaymentController {
   private final PaymentService payments;
+  private final com.utetra.service.PaymentAvailability availability;
+
+  @GetMapping("/methods")
+  public java.util.List<com.utetra.service.PaymentAvailability.Method> methods() {
+    return availability.methods();
+  }
 
   public record PaymentRequest(@NotNull Long orderId) {}
 
@@ -25,6 +31,33 @@ public class PaymentController {
       @Valid @RequestBody PaymentRequest r,
       HttpServletRequest http) {
     return payments.start(u.getId(), r.orderId(), PaymentMethod.VNPAY, http.getRemoteAddr());
+  }
+
+  @PostMapping("/vnpay/qr")
+  public Map<String, String> vnpayQr(
+      @AuthenticationPrincipal UserPrincipal u,
+      @Valid @RequestBody PaymentRequest r, HttpServletRequest http) {
+    return payments.startVnpayQr(u.getId(), r.orderId(), http.getRemoteAddr());
+  }
+
+  @PostMapping("/sepay/qr")
+  public Map<String, String> sepayQr(@AuthenticationPrincipal UserPrincipal u,
+      @Valid @RequestBody PaymentRequest r) {
+    return payments.startSepay(u.getId(), r.orderId());
+  }
+
+  @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+  public org.springframework.http.ResponseEntity<Map<String, Boolean>> paymentStatusError(
+      org.springframework.web.server.ResponseStatusException e) {
+    return org.springframework.http.ResponseEntity.status(e.getStatusCode()).body(Map.of("success", false));
+  }
+
+  @PostMapping("/sepay/webhook")
+  public Map<String, Boolean> sepayWebhook(
+      @RequestHeader(value = "Authorization", required = false) String authorization,
+      @RequestBody Map<String, Object> body) {
+    payments.sepayCallback(authorization, body);
+    return Map.of("success", true);
   }
 
   @PostMapping("/momo")

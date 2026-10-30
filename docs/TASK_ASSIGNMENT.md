@@ -1,3 +1,7 @@
+> Cập nhật theo yêu cầu người dùng 29/10/2026: khuyến mãi sản phẩm phải được khách chọn tại checkout rồi bấm Tính lại tổng tiền; không tự áp dụng. Voucher nhập riêng. Chi tiết: MANUAL_PROMOTIONS_2026-10-29.md. Các mô tả cũ khác với quy tắc này là yêu cầu lịch sử.
+
+> Điều chỉnh được người dùng yêu cầu ngày 29/10/2026: đánh giá vẫn cần sản phẩm đã mua trong đơn đã giao, nhưng bỏ tối thiểu 50 ký tự và bắt buộc ảnh/video. Cho phép chỉ chấm sao; nội dung phân công gốc bên dưới được giữ để tham khảo lịch sử.
+
 # 📋 PHÂN CÔNG NHIỆM VỤ — DỰ ÁN UTETRA
 
 > **Đồ án cuối kỳ môn Lập trình Web**

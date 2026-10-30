@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class VoucherServiceImpl implements VoucherService {
   private final VoucherRepository vouchers;
   private final CommerceAccess access;
+  private final org.springframework.context.ApplicationEventPublisher events;
 
   private Voucher own(Long shop, Long owner, Long id) {
     access.shop(shop, owner);
@@ -72,13 +73,16 @@ public class VoucherServiceImpl implements VoucherService {
     v.setUsageLimit(r.getUsageLimit());
     v.setStartDate(r.getStartDate());
     v.setEndDate(r.getEndDate());
-    return dto(vouchers.save(v));
+    vouchers.save(v);
+    events.publishEvent(new OfferEvents.Changed(shop));
+    return dto(v);
   }
 
   public void delete(Long shop, Long owner, Long id) {
     Voucher v = own(shop, owner, id);
     v.setIsDeleted(true);
     vouchers.save(v);
+    events.publishEvent(new OfferEvents.Changed(shop));
   }
 
   private VoucherItem dto(Voucher v) {

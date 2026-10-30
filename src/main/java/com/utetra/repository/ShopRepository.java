@@ -15,6 +15,7 @@ import java.util.List;
 public interface ShopRepository extends JpaRepository<Shop, Long> {
 
     List<Shop> findByOwnerIdAndIsDeletedFalse(Long ownerId);
+    List<Shop> findByStatusAndIsDeletedFalse(ShopStatus status);
     
     Page<Shop> findByIsDeletedFalse(Pageable pageable);
 
@@ -27,4 +28,7 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     long countByStatusAndIsDeletedFalse(ShopStatus status);
     Page<Shop> findByNameContainingIgnoreCaseAndIsDeletedFalse(String name, Pageable pageable);
     long countByIsDeletedFalse();
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Shop s where s.id = :id")
+    java.util.Optional<Shop> lockById(@Param("id") Long id);
 }

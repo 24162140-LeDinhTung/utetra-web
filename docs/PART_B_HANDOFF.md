@@ -1,4 +1,26 @@
+> Tích hợp chuyển khoản thật SePay ngày 29/10/2026: xem SEPAY_TRANSFER_2026-10-29.md. Cần cấu hình môi trường và webhook, chưa kiểm thử chuyển tiền thật.
+
+> Chính sách khuyến mãi mới theo yêu cầu người dùng: khách tự chọn promotion ở checkout và bấm tính lại; không tự giảm giá trong giỏ. Xem [báo cáo tách voucher và khuyến mãi](MANUAL_PROMOTIONS_2026-10-29.md).
+
+> Cập nhật chọn món trong giỏ, trạng thái tiếng Việt, chi tiết ưu đãi và hồ sơ xem/sửa: xem [báo cáo mới](CART_ACCOUNT_DETAILS_2026-10-29.md).
+
+> Giao diện v2 và chính sách đánh giá mới: xem [báo cáo 29/10/2026](UI_V2_REVIEW_MERGE_2026-10-29.md).
+
+> Cập nhật QR VNPay: xem [triển khai Merchant hosted QR và điều kiện sandbox](VNPAY_HOSTED_QR_2026-10-29.md).
+
+> Cập nhật theo yêu cầu mới: đã tích hợp cộng ví COD khi giao và online khi callback thành công; xem [luồng cộng ví](ORDER_WALLET_SETTLEMENT_2026-10-29.md). Ghi chú chưa tích hợp cộng ví trong báo cáo cũ bên dưới đã được thay thế.
+
+> Cập nhật 29/10/2026: xem [báo cáo ghép nhánh và sửa yêu cầu mới](MERGE_PART_B_2026-10-29.md).
+
 # Bàn giao phần B — UTETra
+
+> Ngày 28/10/2026: đã ghép dev `cb6587d`, giữ thay đổi nhóm và B, kiểm tra lại **26/26 test Java + 2/2 JavaScript thành công**. Chi tiết ở mục đầu PART_B_COMPLETION_2026-10-27.md. Chưa commit/push các chỉnh sửa.
+
+> Cập nhật kiểm tra ngày 27/10/2026: xem [PART_B_COMPLETION_2026-10-27.md](PART_B_COMPLETION_2026-10-27.md).
+> Bản hiện tại đã chạy lại toàn bộ 25 test Java thành công và 2 test JavaScript thành công.
+> Các đoạn “chưa chạy lại”, “chưa có status” và kết quả 19/20 bên dưới là lịch sử ngày 23/10, không phải trạng thái hiện tại.
+> Shop hiện phải ACTIVE để xuất hiện ở catalog hoặc nhận đơn mới. API mới `GET /api/payment/methods` báo phương thức đã có cấu hình; không trả secret.
+> Kiểm thử này dùng H2 và callback mô phỏng, chưa xác nhận giao dịch thật với VNPay/MoMo hay upload Cloudinary.
 
 Cập nhật: 23/10/2026. Mã nguồn đã được chỉnh trực tiếp tại `D:\Year-3\Lap-trinh-web\SpringToolForEclipse-Workspace\utetra-web`.
 
@@ -11,8 +33,8 @@ Cập nhật: 23/10/2026. Mã nguồn đã được chỉnh trực tiếp tại 
 - Báo giá và đặt hàng từng shop; snapshot tên/ảnh/giá/thuộc tính; khóa hàng hóa theo thứ tự ID, cộng gộp số lượng các biến thể để tránh vượt tồn kho. Chỉ xóa cart items thuộc shop đang đặt.
 - Đơn COD, VNPay, MoMo; lịch sử trạng thái; kiểm tra quyền xem/hủy/cập nhật đơn; hoàn lại tồn kho đúng một lần khi hủy hoặc trả hàng.
 - Voucher theo shop hoặc voucher toàn hệ thống có sẵn, giới hạn lượt dùng, mỗi người một lượt, thời gian/minimum/cap; voucher giảm tiền món hoặc phí giao hàng. Không cho sửa điều kiện voucher đã được sử dụng.
-- Promotion liên kết đúng sản phẩm của shop. Khi nhiều promotion cùng hiệu lực, dùng mức giảm tốt nhất cho từng sản phẩm; voucher được áp dụng sau giá promotion.
-- Đánh giá chỉ khi người mua có sản phẩm trong đơn DELIVERED, 1–5 sao, tối thiểu 50 ký tự, 1–5 ảnh/video. Mỗi người một đánh giá cho sản phẩm.
+- Promotion liên kết đúng sản phẩm của shop. Khách chọn một khuyến mãi tại checkout; chỉ giảm cho các món được chọn thuộc phạm vi khuyến mãi. Không chọn thì giữ nguyên giá gốc, không tự chọn mức tốt nhất. Voucher nhập riêng được tính sau khuyến mãi.
+- Đánh giá chỉ khi người mua có sản phẩm trong đơn DELIVERED, 1–5 sao; bình luận và ảnh/video không bắt buộc (bình luận tối đa 5000 ký tự, tối đa 5 tệp). Mỗi người một đánh giá cho sản phẩm.
 - WebSocket gửi thông báo sau commit, xác thực JWT cho STOMP và kiểm tra quyền subscribe. Lỗi gửi thông báo không biến giao dịch đã commit thành lỗi đặt hàng.
 
 ## Quy ước xác thực và phản hồi

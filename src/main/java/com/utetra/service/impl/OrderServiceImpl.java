@@ -34,7 +34,9 @@ public class OrderServiceImpl implements OrderService {
   private final VoucherUsageRepository usages;
   private final CommerceAccess access;
   private final ProductPricing pricing;
+  private final PaymentAvailability paymentAvailability;
   private final ApplicationEventPublisher events;
+  private final OrderWalletSettlement settlement;
 
   @Value("${commerce.shipping-fee:15000}")
   private BigDecimal shippingFee;
@@ -53,6 +55,7 @@ public class OrderServiceImpl implements OrderService {
   }
 
   public OrderDetailResponse createOrder(Long userId, CreateOrderRequest r) {
+    paymentAvailability.requireAvailable(r.getPaymentMethod());
     User user =
         users
             .lockById(userId)
@@ -61,7 +64,8 @@ public class OrderServiceImpl implements OrderService {
         carts
             .findByUserIdAndShopId(userId, r.getShopId())
             .orElseThrow(() -> new IllegalArgumentException("Giỏ hàng cửa hàng này đang trống"));
-    List<CartItem> lines = cartItems.findByCartId(cart.getId());
+    List<CartItem> lines = CartSelection.select(
+        cartItems.findByCartId(cart.getId()), r.getCartItemIds(), CartItem::getId);
     if (lines.isEmpty()) throw new IllegalArgumentException("Giỏ hàng đang trống");
     // Lock products in a stable order and aggregate all variants before reserving stock.
     Map<Long, Integer> quantities = new TreeMap<>();
@@ -90,6 +94,11 @@ public class OrderServiceImpl implements OrderService {
       prices.put(i.getId(), price);
       subtotal = subtotal.add(price.multiply(BigDecimal.valueOf(i.getQuantity())));
     }
+    var promo = pricing.selectedPromotion(r.getShopId(), r.getPromotionId(), quantities.keySet());
+    BigDecimal promotionDiscount = lines.stream().map(i -> pricing.promotionDiscount(
+        locked.get(i.getProduct().getId()), prices.get(i.getId()), promo)
+        .multiply(BigDecimal.valueOf(i.getQuantity()))).reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal voucherBase = subtotal.subtract(promotionDiscount);
     BigDecimal productDiscount = BigDecimal.ZERO;
     if (shippingFee.signum() < 0)
       throw new IllegalStateException("Phí giao hàng cấu hình không hợp lệ");
@@ -105,7 +114,7 @@ public class OrderServiceImpl implements OrderService {
         throw new IllegalArgumentException("Mã giảm giá thuộc cửa hàng khác");
       if (now.isBefore(voucher.getStartDate())
           || !now.isBefore(voucher.getEndDate())
-          || subtotal.compareTo(voucher.getMinOrderAmount()) < 0
+          || voucherBase.compareTo(voucher.getMinOrderAmount()) < 0
           || voucher.getUsageLimit() != null && voucher.getUsedCount() >= voucher.getUsageLimit()
           || usages.countByVoucherIdAndUserId(voucher.getId(), userId) > 0)
         throw new IllegalArgumentException("Mã giảm giá chưa đủ điều kiện hoặc đã hết lượt");
@@ -120,7 +129,7 @@ public class OrderServiceImpl implements OrderService {
       else
         productDiscount =
             ProductPricing.discount(
-                subtotal,
+                voucherBase,
                 voucher.getDiscountType(),
                 voucher.getDiscountValue(),
                 voucher.getMaxDiscountAmount());
@@ -130,9 +139,9 @@ public class OrderServiceImpl implements OrderService {
     o.setUser(user);
     o.setShop(cart.getShop());
     o.setSubtotal(subtotal);
-    o.setDiscountAmount(productDiscount);
+    o.setDiscountAmount(productDiscount.add(promotionDiscount));
     o.setShippingFee(shipping);
-    o.setTotalAmount(subtotal.subtract(productDiscount).add(shipping));
+    o.setTotalAmount(subtotal.subtract(productDiscount).subtract(promotionDiscount).add(shipping));
     if (r.getExpectedTotalAmount() != null
         && r.getExpectedTotalAmount().compareTo(o.getTotalAmount()) != 0)
       throw new IllegalArgumentException(
@@ -174,6 +183,7 @@ public class OrderServiceImpl implements OrderService {
         });
     if (voucher != null) {
       voucher.setUsedCount(voucher.getUsedCount() + 1);
+      events.publishEvent(new OfferEvents.Changed(r.getShopId()));
       vouchers.save(voucher);
       VoucherUsage usage = new VoucherUsage();
       usage.setVoucher(voucher);
@@ -260,6 +270,7 @@ public class OrderServiceImpl implements OrderService {
     }
     o.setStatus(next);
     orders.save(o);
+    settlement.reconcile(o.getId());
     history(o, note);
     publish(o);
   }

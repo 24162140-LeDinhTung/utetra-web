@@ -5,7 +5,8 @@ import com.utetra.dto.response.user.UserResponse;
 import com.utetra.entity.User;
 import com.utetra.exception.custom.ResourceNotFoundException;
 import com.utetra.repository.UserRepository;
-import com.utetra.service.CloudinaryService;
+import com.utetra.service.CatalogManagementService;
+import com.utetra.service.StorageService;
 import com.utetra.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final CloudinaryService cloudinaryService;
+    private final StorageService storageService;   // ⬅️ Đổi từ CloudinaryService
 
     @Override
     public UserResponse getProfile(Long userId) {
@@ -31,10 +32,10 @@ public class UserServiceImpl implements UserService {
     public UserResponse updateProfile(Long userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
-        
+
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
-        
+
         return mapToResponse(userRepository.save(user));
     }
 
@@ -43,11 +44,19 @@ public class UserServiceImpl implements UserService {
     public String uploadAvatar(Long userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
-        
-        String url = cloudinaryService.uploadFile(file, "utetra/avatars");
+
+        // Validate MIME và dung lượng — dùng lại hàm có sẵn
+        CatalogManagementService.validateMedia(file, false);
+
+        // Xóa avatar cũ (chỉ xóa file local, không xóa URL Cloudinary cũ nếu có)
+        if (user.getAvatarUrl() != null && user.getAvatarUrl().startsWith("/uploads")) {
+            storageService.deleteFile(user.getAvatarUrl());
+        }
+
+        String url = storageService.uploadFile(file, "utetra/avatars");
         user.setAvatarUrl(url);
         userRepository.save(user);
-        
+
         return url;
     }
 

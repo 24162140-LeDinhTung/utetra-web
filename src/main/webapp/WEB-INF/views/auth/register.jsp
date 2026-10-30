@@ -1,64 +1,37 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
-<html>
-<head>
-    <title>Đăng ký - UTETra</title>
-</head>
+<html lang="vi">
+<head><title>Đăng ký · UTETra</title></head>
 <body>
-    <div class="row justify-content-center align-items-center" style="min-height: 80vh;">
-        <div class="col-md-5 col-lg-4">
-            <div class="card shadow-lg border-0 rounded-4">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <h2 class="text-warning fw-bold mb-2">☕ UTETra</h2>
-                        <p class="text-muted">Tạo tài khoản mới</p>
-                    </div>
-                    
-                    <!-- FORM ĐĂNG KÝ -->
-                    <form id="registerForm">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Họ và tên</label>
-                            <input type="text" id="fullName" class="form-control bg-light" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Email</label>
-                            <input type="email" id="email" class="form-control bg-light" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Mật khẩu</label>
-                            <input type="password" id="password" class="form-control bg-light" required minlength="6">
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label fw-bold">Số điện thoại (tùy chọn)</label>
-                            <input type="text" id="phone" class="form-control bg-light">
-                        </div>
-                        <button type="button" onclick="register()" class="btn btn-warning btn-lg w-100 fw-bold text-dark mb-3">
-                            Đăng ký
-                        </button>
-                    </form>
-
-                    <div class="text-center mt-4">
-                        <span class="text-muted">Đã có tài khoản? </span>
-                        <a href="/auth/login" class="text-warning fw-bold text-decoration-none">Đăng nhập</a>
-                    </div>
-
-                    <!-- FORM NHẬP OTP (Ẩn ban đầu) -->
-                    <div id="otpSection" style="display: none;" class="mt-4 pt-4 border-top">
-                        <h5 class="text-center text-success">Nhập mã OTP</h5>
-                        <p class="text-muted text-center small">Mã đã được gửi tới email của bạn</p>
-                        <div class="mb-3">
-                            <input type="text" id="otpCode" class="form-control form-control-lg text-center fw-bold" placeholder="Nhập 6 số" maxlength="6">
-                        </div>
-                        <button type="button" onclick="verifyOtp()" class="btn btn-success w-100 fw-bold">
-                            Xác thực tài khoản
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+<section class="auth-experience auth-experience-register" aria-label="Đăng ký tài khoản UTETra">
+<aside class="auth-story" aria-label="Một chút trà, thêm chút vui">
+    <div class="auth-story-copy"><p class="auth-eyebrow">A NEW FACE. A LITTLE MORE JOY.</p>
+        <h1>Một gu riêng.<br>Một góc <em>quen.</em></h1>
+        <p class="auth-story-description">Tạo tài khoản, lưu lại những món yêu thích và tìm vị ngon cho mỗi ngày của bạn.</p>
     </div>
+    <figure class="auth-story-photo"><img src="${pageContext.request.contextPath}/images/storefront-tea-hero.png" alt="Matcha latte và trà sữa trân châu — hai hương vị của UTETra" width="1536" height="1024" fetchpriority="high"><figcaption>THE LITTLE JOYS, EVERY DAY</figcaption><span class="auth-tea-seal" aria-hidden="true">tea time<br><em>good time.</em><b>✳</b></span></figure>
+    <div class="auth-story-foot"><span>MATCHA · TRÀ SỮA · CÀ PHÊ</span><span aria-hidden="true">✳</span></div>
+</aside>
+<div class="auth-form-panel">
+    <nav class="auth-tabs" aria-label="Tài khoản"><a href="${pageContext.request.contextPath}/auth/login">Đăng nhập</a><a href="${pageContext.request.contextPath}/auth/register" class="active" aria-current="page">Đăng ký</a></nav>
+    <div class="auth-form-heading"><p class="auth-eyebrow">THÊM MỘT NGƯỜI, THÊM MỘT NIỀM VUI</p><h2>Hẹn bạn một ly trà.</h2><p>Tạo tài khoản để bắt đầu câu chuyện vị ngon.</p></div>
+    <form id="registerForm">
+        <div class="auth-field"><label for="fullName">Họ và tên</label><input type="text" id="fullName" class="form-control" placeholder="Tên của bạn" autocomplete="name" required></div>
+        <div class="auth-field"><label for="email">Email</label><input type="email" id="email" class="form-control" placeholder="Nhập email của bạn" autocomplete="email" required></div>
+        <div class="auth-field"><label for="password">Mật khẩu</label><input type="password" id="password" class="form-control" placeholder="Tối thiểu 6 ký tự" autocomplete="new-password" required minlength="6"></div>
+        <div class="auth-field"><label for="phone">Số điện thoại <span>(tùy chọn)</span></label><input type="text" id="phone" class="form-control" placeholder="Số điện thoại của bạn" autocomplete="tel" inputmode="tel"></div>
+        <button type="button" onclick="register()" class="btn auth-submit">Đăng ký</button>
+    </form>
+    <div id="otpSection" style="display: none;" class="auth-otp">
+        <span class="auth-otp-symbol" aria-hidden="true">✳</span><h3>Kiểm tra hộp thư nhé.</h3><p>Mã OTP đã được gửi tới email của bạn.<br>Nhập mã để hoàn tất đăng ký tài khoản.</p>
+        <div class="auth-field"><label for="otpCode">Mã xác thực OTP</label><input type="text" id="otpCode" class="form-control auth-otp-input" placeholder="Nhập 6 số" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div>
+        <button type="button" onclick="verifyOtp()" class="btn auth-submit">Xác thực tài khoản</button>
+    </div>
+    <p class="auth-switch">Đã có tài khoản? <a href="${pageContext.request.contextPath}/auth/login">Đăng nhập <span aria-hidden="true">↗</span></a></p>
+</div>
+</section>
 
-    <script>
+<script>
         function register() {
             const data = {
                 fullName: document.getElementById('fullName').value,
@@ -67,7 +40,7 @@
                 phone: document.getElementById('phone').value
             };
 
-            fetch('/api/auth/register', {
+            fetch('${pageContext.request.contextPath}/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
@@ -90,7 +63,7 @@
             const email = document.getElementById('email').value;
             const otp = document.getElementById('otpCode').value;
 
-            fetch('/api/auth/verify-otp', {
+            fetch('${pageContext.request.contextPath}/api/auth/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, otp: otp })
@@ -99,7 +72,7 @@
             .then(resData => {
                 if (resData.code === 200) {
                     alert('Xác thực thành công! Bạn có thể đăng nhập ngay bây giờ.');
-                    window.location.href = '/auth/login';
+                    window.location.href = '${pageContext.request.contextPath}/auth/login';
                 } else {
                     alert('Lỗi: ' + resData.message);
                 }

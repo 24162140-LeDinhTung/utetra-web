@@ -1,0 +1,13 @@
+/* Account menu is shared by customer, vendor and administrator headers. */
+.account-menu{position:relative;color:#3e522f;font-size:.9rem}
+.account-trigger{display:flex;align-items:center;gap:.6rem;cursor:pointer;list-style:none;border:1px solid #bac8a8;border-radius:2rem;padding:.25rem .8rem .25rem .25rem;background:#fffdf7;min-height:44px}
+.account-trigger::-webkit-details-marker{display:none}.account-trigger::after{content:'▾';font-size:.75rem;margin-left:.25rem}
+.account-trigger img{width:38px;height:38px;object-fit:cover;border-radius:50%;flex-shrink:0}
+.account-name{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-dropdown{position:absolute;right:0;top:calc(100% + .5rem);min-width:240px;max-width:min(320px,90vw);padding:.7rem;background:#fffdf7;border:1px solid #d5dcc9;border-radius:1rem;box-shadow:0 12px 30px #25331c22;z-index:1100}
+.account-email{font-size:.8rem;overflow-wrap:anywhere;color:#6b755f;margin:.3rem .5rem .6rem}
+.account-dropdown a,.account-dropdown button{display:block;width:100%;text-align:left;padding:.7rem;border-radius:.5rem;color:#3e522f;background:transparent;border:0;text-decoration:none;font:inherit}
+.account-dropdown a:hover,.account-dropdown button:hover{background:#eef1e5}.account-dropdown button{color:#8b5041}
+.account-trigger:focus-visible,.account-dropdown a:focus-visible,.account-dropdown button:focus-visible{outline:3px solid #9bab7c;outline-offset:3px}
+.profile-facts{display:grid;gap:1.3rem}.profile-facts dt{color:#68765d;font-size:.9rem}.profile-facts dd{margin:.4rem 0 0;overflow-wrap:anywhere;font-weight:600}
+@media(max-width:575px){.account-name{max-width:130px}.account-dropdown{min-width:220px}}

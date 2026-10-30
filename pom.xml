@@ -34,6 +34,7 @@
 		<tomcat.version>11.0.24</tomcat.version>
 	</properties>
 	<dependencies>
+        <dependency><groupId>com.google.zxing</groupId><artifactId>core</artifactId><version>3.5.3</version></dependency>
         <dependency>
             <groupId>com.h2database</groupId><artifactId>h2</artifactId><scope>test</scope>
         </dependency>
@@ -131,7 +132,7 @@
 		    <groupId>org.glassfish.web</groupId>
 		    <artifactId>jakarta.servlet.jsp.jstl</artifactId>
 		</dependency>
-		
+
 		<!-- Sitemesh 3 -->
 		<dependency>
 		    <groupId>org.sitemesh</groupId>
@@ -158,11 +159,10 @@
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Cloudinary -->
 		<dependency>
-			<groupId>com.cloudinary</groupId>
-			<artifactId>cloudinary-http45</artifactId>
-			<version>1.39.0</version>
+		<groupId>com.cloudinary</groupId>
+		<artifactId>cloudinary-http44</artifactId>
+		<version>1.36.0</version>
 		</dependency>
 
 		<!-- MapStruct -->

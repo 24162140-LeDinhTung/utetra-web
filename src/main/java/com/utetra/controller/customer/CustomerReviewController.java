@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class CustomerReviewController {
   private final ReviewService reviews;
-  private final CloudinaryService cloud;
+  private final StorageService storage;   // ⬅️ Đổi từ CloudinaryService cloud
 
   @PostMapping("/api/customer/reviews")
   public ReviewResponse create(
@@ -28,7 +28,7 @@ public class CustomerReviewController {
   public Map<String, String> upload(
       @AuthenticationPrincipal UserPrincipal u, @RequestParam MultipartFile file) {
     CatalogManagementService.validateMedia(file, true);
-    return Map.of("url", cloud.uploadFile(file, "utetra/reviews/" + u.getId()));
+    return Map.of("url", storage.uploadFile(file, "utetra/reviews/" + u.getId()));
   }
 
   @GetMapping("/api/products/{id}/reviews")
