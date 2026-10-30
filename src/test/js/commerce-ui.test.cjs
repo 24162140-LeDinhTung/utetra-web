@@ -5,10 +5,10 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 const source = fs.readFileSync(path.join(__dirname, '../../main/resources/static/js/commerce.js'), 'utf8');
 const wait = async predicate => { for(let i=0;i<100;i++){if(predicate())return;await new Promise(r=>setTimeout(r,10));}throw Error('UI timed out'); };
-function browser(page, handler, search) {
+function browser(page, handler, search, savedAddress='') {
   const dom = new JSDOM('<div id="commerce" data-page="'+page+'"><div id="notice"></div><div id="commerce-content"></div></div>', {url:'http://localhost/customer/'+page+(search ?? (page==='payment'?'?orderId=9':page==='review'?'?orderId=9&productId=3':'?shopId=1')),runScripts:'outside-only',pretendToBeVisual:true});
   const w=dom.window;w.localStorage.setItem('accessToken','test-token');w.Headers=Headers;
-  w.fetch=async (url,options={})=>({ok:true,status:200,text:async()=>JSON.stringify(await handler(url,options))});
+  w.fetch=async (url,options={})=>({ok:true,status:200,text:async()=>JSON.stringify(page==='checkout'&&url==='/api/customer/profile'?{code:200,data:{shippingAddress:savedAddress}}:await handler(url,options))});
   class Socket{constructor(){Socket.last=this;}send(){} close(){}}
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};w.WebSocket=Socket;w.HTMLElement.prototype.scrollIntoView=function(){};w.eval(source);return {w,dom,Socket};
 }
@@ -37,6 +37,7 @@ test('checkout selects shop promotion independently of voucher and invalidates q
  });
  try{
   await wait(()=>b.w.document.querySelector('[name=offer]')?.options.length===2);
+  b.w.document.querySelector('[name=shippingAddress]').value='Địa chỉ thử';
   const select=b.w.document.querySelector('[name=offer]');b.w.document.querySelector('[name=voucherCode]').value='VOUCHER';select.value='7';select.dispatchEvent(new b.w.Event('change',{bubbles:true}));assert.equal(quotes.length,0);
   b.w.document.querySelector('[name=shippingAddress]').value='Địa chỉ thử';b.w.document.querySelector('#quote').click();
   await wait(()=>quotes.length && !b.w.document.querySelector('#place').disabled);
@@ -164,4 +165,53 @@ test('SePay displays real transfer details and waits for server confirmation',as
   paid=true;b.Socket.last.onmessage({data:'MESSAGE\n\n{"orderId":9,"paymentStatus":"SUCCESS"}\0'});
   await wait(()=>!b.w.document.querySelector('#payment-qr'));
  } finally {b.dom.window.close();}
+});
+
+
+test('checkout rejects blank address from both buttons without quote or order requests',async()=>{
+ const writes=[];
+ const b=browser('checkout',async(url,o)=>{
+  if(url==='/api/customer/cart')return item(1);
+  if(url==='/api/payment/methods')return [{code:'COD',available:true}];
+  if(url.includes('/promotions?'))return [];
+  writes.push(url);return {};
+ });
+ try{
+  await wait(()=>b.w.document.querySelector('#place')?.disabled===false);
+  const address=b.w.document.querySelector('[name=shippingAddress]');address.value='   ';
+  b.w.document.querySelector('#quote').click();
+  await wait(()=>b.w.document.querySelector('#notice').classList.contains('checkout-address-warning'));
+  assert.match(b.w.document.querySelector('#notice').textContent,/chưa nhập địa chỉ nhận hàng/);
+  assert.equal(b.w.document.activeElement,address);
+  b.w.document.querySelector('#place').click();await new Promise(r=>setTimeout(r,20));
+  assert.deepEqual(writes,[]);
+ }finally{b.w.close();}
+});
+
+test('checkout prefills remembered address safely and allows another delivery address',async()=>{
+ const quotes=[];const saved='<b>Địa chỉ đã giao</b>';
+ const b=browser('checkout',async(url,o)=>{
+  if(url==='/api/customer/cart')return item(1);
+  if(url==='/api/payment/methods')return [{code:'COD',available:true}];
+  if(url.includes('/promotions?'))return [];
+  if(url.endsWith('/quote')){quotes.push(JSON.parse(o.body));return {totalAmount:45000};}
+  throw Error(url);
+ },undefined,saved);
+ try{
+  await wait(()=>b.w.document.querySelector('[name=paymentMethod] option')?.disabled===false);
+  const address=b.w.document.querySelector('[name=shippingAddress]');assert.equal(address.value,saved);assert.equal(address.querySelector('b'),null);
+  address.value='Địa chỉ khác';address.dispatchEvent(new b.w.Event('input',{bubbles:true}));
+  b.w.document.querySelector('#quote').click();await wait(()=>quotes.length===1);assert.equal(quotes[0].shippingAddress,'Địa chỉ khác');
+ }finally{b.w.close();}
+});
+
+
+test('vendor order detail shows buyer name and login email as escaped text',async()=>{
+ const b=browser('vendor-order',async()=>({id:9,orderCode:'UTE-9',shopName:'Shop A',customerName:'<b>Khách hàng</b>',customerEmail:'buyer@example.test',shippingAddress:'Địa chỉ',items:[],statusHistory:[],status:'DELIVERED',paymentStatus:'SUCCESS',paymentMethod:'COD'}));
+ try{
+  await wait(()=>b.w.document.body.textContent.includes('buyer@example.test'));
+  assert.match(b.w.document.body.textContent,/<b>Khách hàng<\/b>/);
+  assert.equal([...b.w.document.querySelectorAll('b')].length,0);
+  assert.match(b.w.document.body.textContent,/Email đăng nhập/);
+ }finally{b.w.close();}
 });

@@ -12,3 +12,12 @@
 .ute-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}.ute-facts dt{font-size:.85rem;color:#65745a}.ute-facts dd{margin:.3rem 0;overflow-wrap:anywhere}#discount-details:focus{outline:2px solid #a7b78e;outline-offset:3px}
 
 .ute-detail-dialog{width:min(760px,94vw);max-height:85vh;overflow:auto;border:1px solid #bdc8ad;border-radius:1rem;padding:1.5rem;background:#fffdf7;color:#3e522f}.ute-detail-dialog::backdrop{background:#17201177}.ute-detail-dialog img{max-width:100%}
+
+#notice.checkout-address-warning:not(:empty){position:fixed;top:100px;left:50%;transform:translateX(-50%);width:min(560px,calc(100vw - 32px));z-index:2000;box-shadow:0 8px 25px #0002;animation:checkout-address-enter .3s ease-out}
+@keyframes checkout-address-enter{from{opacity:0;transform:translate(-50%,-70px)}to{opacity:1;transform:translate(-50%,0)}}
+@media(prefers-reduced-motion:reduce){#notice.checkout-address-warning{animation:none}}
+
+.customer-shop-cover{display:block;width:100%;height:clamp(180px,25vw,320px);object-fit:cover;border-radius:18px;margin-bottom:18px}
+.customer-shop-identity{display:flex;align-items:center;gap:22px;min-width:0}.customer-shop-identity>div{min-width:0;overflow-wrap:anywhere}
+.customer-shop-avatar{width:100px;height:100px;flex-shrink:0;object-fit:cover;border-radius:20px;border:3px solid #fffdf8}
+@media(max-width:600px){.customer-shop-heading{padding:24px 20px}.customer-shop-identity{align-items:flex-start;gap:14px}.customer-shop-avatar{width:64px;height:64px;border-radius:14px}.customer-shop-cover{height:180px}}

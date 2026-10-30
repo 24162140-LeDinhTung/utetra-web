@@ -18,7 +18,7 @@ public class CreateOrderRequest {
   @jakarta.validation.constraints.Size(min = 1, max = 500)
   private java.util.List<@NotNull @jakarta.validation.constraints.Positive Long> cartItemIds;
 
-  @NotBlank
+  @NotBlank(message = "Bạn chưa nhập địa chỉ nhận hàng.")
   @jakarta.validation.constraints.Size(max = 2000)
   private String shippingAddress;
 

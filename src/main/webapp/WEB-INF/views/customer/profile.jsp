@@ -31,12 +31,12 @@
             <div class="d-flex gap-2 flex-wrap"><button type="submit" class="btn btn-warning fw-bold px-4">Lưu thay đổi</button><a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/customer/profile">Quay lại thông tin</a></div>
           </form>
         </c:when><c:otherwise>
-          <dl class="profile-facts"><div><dt>Họ và tên</dt><dd id="profile-fullName">Đang tải…</dd></div><div><dt>Email đăng nhập</dt><dd id="profile-email">Đang tải…</dd></div><div><dt>Số điện thoại</dt><dd id="profile-phone">Đang tải…</dd></div><div><dt>Ngày tham gia</dt><dd id="profile-createdAt">Đang tải…</dd></div></dl>
+          <dl class="profile-facts"><div><dt>Họ và tên</dt><dd id="profile-fullName">Đang tải…</dd></div><div><dt>Email đăng nhập</dt><dd id="profile-email">Đang tải…</dd></div><div><dt>Số điện thoại</dt><dd id="profile-phone">Đang tải…</dd></div><div><dt>Địa chỉ nhận hàng</dt><dd id="profile-shippingAddress">Chưa có địa chỉ giao hàng thành công</dd></div><div><dt>Ngày tham gia</dt><dd id="profile-createdAt">Đang tải…</dd></div></dl>
           <a href="${pageContext.request.contextPath}/customer/profile/edit" class="btn btn-warning fw-bold mt-3" id="edit-profile">Chỉnh sửa thông tin</a>
         </c:otherwise></c:choose>
       </div>
     </div>
   </div>
 </div>
-<script src="${pageContext.request.contextPath}/js/profile.js" defer></script>
+<script src="${pageContext.request.contextPath}/js/profile.js?v=20261030-1" defer></script>
 </body></html>

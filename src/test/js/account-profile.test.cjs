@@ -14,9 +14,9 @@ test('account dropdown renders real profile safely and handles dismissal',async(
  finally{w.close();}
 });
 test('profile view loads display values without sending writes or rendering editable fields',async()=>{
- const dom=new JSDOM('<div id="profile-page" data-editing="false"><div id="profile-notice"></div><img id="avatarImg"><div id="userFullName"></div><div id="userEmail"></div><dl><dd id="profile-fullName"></dd><dd id="profile-email"></dd><dd id="profile-phone"></dd><dd id="profile-createdAt"></dd></dl></div>',{url:'https://test.example/customer/profile',runScripts:'outside-only'});
- const w=dom.window,calls=[];w.fetch=async(url,options)=>{calls.push(options);return {ok:true,status:200,json:async()=>({code:200,data:{fullName:'Khách hàng',email:'user@test.example',phone:null,createdAt:'2026-10-29T12:00:00'}})}};
- try{w.eval(profileSource);await wait(()=>w.document.querySelector('#profile-fullName').textContent==='Khách hàng');assert.equal(w.document.querySelector('#profile-phone').textContent,'Chưa cập nhật');assert.equal(w.document.querySelector('form,input'),null);assert.equal(calls.length,1);assert.equal(calls[0].method,undefined);}
+ const dom=new JSDOM('<div id="profile-page" data-editing="false"><div id="profile-notice"></div><img id="avatarImg"><div id="userFullName"></div><div id="userEmail"></div><dl><dd id="profile-fullName"></dd><dd id="profile-email"></dd><dd id="profile-phone"></dd><dd id="profile-shippingAddress"></dd><dd id="profile-createdAt"></dd></dl></div>',{url:'https://test.example/customer/profile',runScripts:'outside-only'});
+ const w=dom.window,calls=[];w.fetch=async(url,options)=>{calls.push(options);return {ok:true,status:200,json:async()=>({code:200,data:{fullName:'Khách hàng',email:'user@test.example',phone:null,shippingAddress:'123 Đường thử',createdAt:'2026-10-29T12:00:00'}})}};
+ try{w.eval(profileSource);await wait(()=>w.document.querySelector('#profile-fullName').textContent==='Khách hàng');assert.equal(w.document.querySelector('#profile-phone').textContent,'Chưa cập nhật');assert.equal(w.document.querySelector('form,input'),null);assert.equal(w.document.querySelector('#profile-shippingAddress').textContent,'123 Đường thử');assert.equal(calls.length,1);assert.equal(calls[0].method,undefined);}
  finally{w.close();}
 });
 

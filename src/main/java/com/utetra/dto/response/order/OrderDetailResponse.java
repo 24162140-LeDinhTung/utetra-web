@@ -14,6 +14,8 @@ public class OrderDetailResponse {
   private String orderCode;
   private Long shopId;
   private String shopName;
+  private String customerName;
+  private String customerEmail;
   private BigDecimal subtotal;
   private BigDecimal discountAmount;
   private BigDecimal shippingFee;

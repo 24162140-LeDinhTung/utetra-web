@@ -55,6 +55,8 @@ public class OrderServiceImpl implements OrderService {
   }
 
   public OrderDetailResponse createOrder(Long userId, CreateOrderRequest r) {
+    if (r.getShippingAddress() == null || r.getShippingAddress().isBlank())
+      throw new IllegalArgumentException("Bạn chưa nhập địa chỉ nhận hàng.");
     paymentAvailability.requireAvailable(r.getPaymentMethod());
     User user =
         users
@@ -268,6 +270,11 @@ public class OrderServiceImpl implements OrderService {
                 paymentTransactions.save(t);
               });
     }
+    if (next == OrderStatus.DELIVERED) {
+      User buyer = users.lockById(o.getUser().getId()).orElseThrow();
+      buyer.setShippingAddress(o.getShippingAddress());
+      users.save(buyer);
+    }
     o.setStatus(next);
     orders.save(o);
     settlement.reconcile(o.getId());
@@ -302,7 +309,10 @@ public class OrderServiceImpl implements OrderService {
     Order o = order(id);
     if (!o.getShop().getId().equals(shop))
       throw new AccessDeniedException("Đơn không thuộc cửa hàng");
-    return detail(o);
+    OrderDetailResponse result = detail(o);
+    result.setCustomerName(o.getUser().getFullName());
+    result.setCustomerEmail(o.getUser().getEmail());
+    return result;
   }
 
   @Transactional(readOnly = true)

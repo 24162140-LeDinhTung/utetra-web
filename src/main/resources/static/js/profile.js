@@ -15,6 +15,7 @@
     if(user.avatarUrl){try{const u=new URL(user.avatarUrl.startsWith('/')?base+user.avatarUrl:user.avatarUrl,location.origin);if(['http:','https:'].includes(u.protocol))$('avatarImg').src=u.href;}catch{/* Keep default image. */}}
     if(editing){$('fullName').value=user.fullName||'';$('email').value=user.email;$('phone').value=user.phone||'';}
     else{for(const key of ['fullName','email','phone'])$('profile-'+key).textContent=user[key]||'Chưa cập nhật';$('profile-createdAt').textContent=user.createdAt?new Date(user.createdAt).toLocaleDateString('vi-VN'):'Chưa cập nhật';}
+    if($('profile-shippingAddress'))$('profile-shippingAddress').textContent=user.shippingAddress||'Chưa có địa chỉ giao hàng thành công';
     window.dispatchEvent(new CustomEvent('utetra:profile-updated',{detail:user}));
   }
   $('avatarImg').addEventListener('error',()=>{const fallback=base+'/images/customer-avatar.svg';if(!$('avatarImg').src.endsWith(fallback))$('avatarImg').src=fallback;});
